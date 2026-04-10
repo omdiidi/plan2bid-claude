@@ -109,9 +109,12 @@ async def accept_share(token: str, request: Request):
 
         share_email = share.get("shared_with_email") or share.get("email")
         if share.get("share_type") == "email" and share_email:
-            user_profile = queries.get_user_by_email(share_email)
-            if user_profile and user_profile.get("id") != user_id:
+            # If the invited email has a registered user, they must be the one accepting
+            target_user = queries.get_user_by_email(share_email)
+            if target_user and target_user.get("id") != user_id:
                 raise HTTPException(403, "This share was sent to a different email address")
+            # Note: if target email hasn't signed up yet, we allow any authenticated user
+            # to accept. This is a known limitation of token-based sharing.
 
         if project.get("user_id") == user_id:
             raise HTTPException(400, "You already own this project")
