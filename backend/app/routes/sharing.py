@@ -52,6 +52,7 @@ async def share_by_email(job_id: str, body: EmailShareBody, request: Request):
             share_data["accepted_at"] = "now()"
 
         row = queries.create_share(share_data)
+        row["token"] = row.get("share_token")
         return row
     except HTTPException:
         raise
@@ -80,6 +81,7 @@ async def share_by_link(job_id: str, body: LinkShareBody, request: Request):
             "share_token": token,
         }
         row = queries.create_share(share_data)
+        row["token"] = row.get("share_token") or token
         return row
     except HTTPException:
         raise
@@ -105,8 +107,9 @@ async def accept_share(token: str, request: Request):
         # Link shares are reusable — multiple users can accept.
         # The existing_share check below (line 117) prevents duplicate access per user.
 
-        if share.get("share_type") == "email" and share.get("email"):
-            user_profile = queries.get_user_by_email(share["email"])
+        share_email = share.get("shared_with_email") or share.get("email")
+        if share.get("share_type") == "email" and share_email:
+            user_profile = queries.get_user_by_email(share_email)
             if user_profile and user_profile.get("id") != user_id:
                 raise HTTPException(403, "This share was sent to a different email address")
 

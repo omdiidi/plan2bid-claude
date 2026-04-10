@@ -312,7 +312,18 @@ async def get_sub_bid_detail(job_id: str, submission_id: int, request: Request):
         rows = _db().table("sub_submissions").select("*").eq("id", submission_id).eq("project_id", job_id).execute()
         if not rows:
             raise HTTPException(404, "Submission not found")
-        return rows[0]
+        row = rows[0]
+        # Parse items from JSON string if needed
+        items_raw = row.get("items", "[]")
+        if isinstance(items_raw, str):
+            import json as _json
+            try:
+                items = _json.loads(items_raw)
+            except (ValueError, TypeError):
+                items = []
+        else:
+            items = items_raw or []
+        return {"submission": row, "items": items}
     except HTTPException:
         raise
     except Exception as e:

@@ -23,9 +23,9 @@ async def validate_signup_token(body: ValidateTokenBody):
         row = queries.get_signup_token(body.token)
         if not row:
             return {"valid": False, "reason": "Token not found"}
-        if row.get("revoked"):
-            return {"valid": False, "reason": "Token has been revoked"}
-        if row.get("claimed"):
+        if row.get("is_active") is False:
+            return {"valid": False, "reason": "Token has been revoked or already used"}
+        if row.get("used_by"):
             return {"valid": False, "reason": "Token has already been used"}
         expires_at = row.get("expires_at")
         if expires_at:
@@ -47,9 +47,9 @@ async def claim_signup_token(body: ClaimTokenBody, request: Request):
         row = queries.get_signup_token(body.token)
         if not row:
             raise HTTPException(404, "Token not found")
-        if row.get("revoked"):
-            raise HTTPException(400, "Token has been revoked")
-        if row.get("claimed"):
+        if row.get("is_active") is False:
+            raise HTTPException(400, "Token has been revoked or is no longer active")
+        if row.get("used_by"):
             raise HTTPException(400, "Token has already been used")
 
         queries.claim_signup_token(body.token, user_id)

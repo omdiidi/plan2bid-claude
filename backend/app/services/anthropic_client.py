@@ -157,6 +157,7 @@ async def validate_description(
     facility_type: str,
     trade: str,
     project_name: str = "",
+    street_address: str = "",
     city: str = "",
     state: str = "",
     zip_code: str = "",
@@ -167,6 +168,8 @@ async def validate_description(
         context_parts.append(f"Project name: {project_name}")
     context_parts.append(f"Facility type: {facility_type}")
     context_parts.append(f"Trade: {trade}")
+    if street_address:
+        context_parts.append(f"Address: {street_address}")
     if project_type:
         context_parts.append(f"Project type: {project_type}")
     if city or state or zip_code:

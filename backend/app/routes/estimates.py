@@ -651,6 +651,7 @@ async def validate_description(request: Request):
             facility_type=body.get("facility_type", ""),
             trade=body.get("trade", ""),
             project_name=body.get("project_name", ""),
+            street_address=body.get("street_address", ""),
             city=body.get("city", ""),
             state=body.get("state", ""),
             zip_code=body.get("zip_code", ""),
