@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, HTTPException, Request
@@ -5,6 +6,8 @@ from pydantic import BaseModel
 
 from app.auth import DEV_UUID, get_optional_user_id, get_user_id
 from app.db import queries
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -37,7 +40,8 @@ async def validate_signup_token(body: ValidateTokenBody):
                 return {"valid": False, "reason": "Token has expired"}
         return {"valid": True}
     except Exception as e:
-        raise HTTPException(500, f"Failed to validate token: {e}")
+        logger.exception(f"Failed to validate token: {e}")
+        raise HTTPException(500, "Internal server error")
 
 
 @router.post("/api/auth/claim-signup-token")
@@ -57,4 +61,5 @@ async def claim_signup_token(body: ClaimTokenBody, request: Request):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(500, f"Failed to claim token: {e}")
+        logger.exception(f"Failed to claim token: {e}")
+        raise HTTPException(500, "Internal server error")

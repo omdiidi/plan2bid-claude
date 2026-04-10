@@ -1,9 +1,13 @@
+import logging
+
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 
 from app.auth import DEV_UUID, ProjectPermission, get_optional_user_id, get_user_id, require_permission
 from app.db import queries
 from app.db.client import _db
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -34,7 +38,8 @@ async def list_projects(request: Request):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(500, f"Failed to list projects: {e}")
+        logger.exception(f"Failed to list projects: {e}")
+        raise HTTPException(500, "Internal server error")
 
 
 @router.get("/api/projects/{job_id}")
@@ -49,7 +54,8 @@ async def get_project(job_id: str, request: Request):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(500, f"Failed to get project: {e}")
+        logger.exception(f"Failed to get project: {e}")
+        raise HTTPException(500, "Internal server error")
 
 
 @router.delete("/api/projects/{job_id}")
@@ -69,7 +75,8 @@ async def delete_project(job_id: str, request: Request):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(500, f"Failed to delete project: {e}")
+        logger.exception(f"Failed to delete project: {e}")
+        raise HTTPException(500, "Internal server error")
 
 
 @router.post("/api/projects/bulk-delete")
@@ -81,7 +88,8 @@ async def bulk_delete_projects(body: BulkDeleteBody, request: Request):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(500, f"Failed to bulk delete: {e}")
+        logger.exception(f"Failed to bulk delete: {e}")
+        raise HTTPException(500, "Internal server error")
 
 
 @router.patch("/api/projects/{job_id}/name")
@@ -102,4 +110,5 @@ async def rename_project(job_id: str, request: Request):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(500, f"Failed to rename project: {e}")
+        logger.exception(f"Failed to rename project: {e}")
+        raise HTTPException(500, "Internal server error")

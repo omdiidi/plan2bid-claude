@@ -1,4 +1,5 @@
 import json
+import logging
 import uuid
 from datetime import datetime, timezone
 
@@ -13,6 +14,8 @@ from app.auth import (
 )
 from app.db import queries
 from app.db.client import _db
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -202,7 +205,8 @@ async def start_estimate(
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(500, f"Failed to start estimation: {e}")
+        logger.exception(f"Failed to start estimation: {e}")
+        raise HTTPException(500, "Internal server error")
 
 
 # ---------------------------------------------------------------------------
@@ -264,7 +268,8 @@ async def get_estimate_status(job_id: str, request: Request):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(500, f"Failed to get status: {e}")
+        logger.exception(f"Failed to get status: {e}")
+        raise HTTPException(500, "Internal server error")
 
 
 # ---------------------------------------------------------------------------
@@ -366,7 +371,8 @@ async def get_estimate(job_id: str, request: Request):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(500, f"Failed to get estimate: {e}")
+        logger.exception(f"Failed to get estimate: {e}")
+        raise HTTPException(500, "Internal server error")
 
 
 # ---------------------------------------------------------------------------
@@ -388,7 +394,8 @@ async def delete_material_item(job_id: str, item_id: str, request: Request):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(500, f"Failed to delete material item: {e}")
+        logger.exception(f"Failed to delete material item: {e}")
+        raise HTTPException(500, "Internal server error")
 
 
 @router.post("/api/estimate/{job_id}/material")
@@ -409,7 +416,8 @@ async def add_material_item(job_id: str, request: Request):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(500, f"Failed to add material item: {e}")
+        logger.exception(f"Failed to add material item: {e}")
+        raise HTTPException(500, "Internal server error")
 
 
 @router.delete("/api/estimate/{job_id}/labor/{item_id}")
@@ -427,7 +435,8 @@ async def delete_labor_item(job_id: str, item_id: str, request: Request):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(500, f"Failed to delete labor item: {e}")
+        logger.exception(f"Failed to delete labor item: {e}")
+        raise HTTPException(500, "Internal server error")
 
 
 @router.post("/api/estimate/{job_id}/labor")
@@ -448,7 +457,8 @@ async def add_labor_item(job_id: str, request: Request):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(500, f"Failed to add labor item: {e}")
+        logger.exception(f"Failed to add labor item: {e}")
+        raise HTTPException(500, "Internal server error")
 
 
 # ---------------------------------------------------------------------------
@@ -479,7 +489,8 @@ async def update_material_item(job_id: str, item_id: str, request: Request):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(500, f"Failed to update material item: {e}")
+        logger.exception(f"Failed to update material item: {e}")
+        raise HTTPException(500, "Internal server error")
 
 
 LABOR_UPDATABLE = {"description", "quantity", "unit", "total_labor_hours",
@@ -505,7 +516,8 @@ async def update_labor_item(job_id: str, item_id: str, request: Request):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(500, f"Failed to update labor item: {e}")
+        logger.exception(f"Failed to update labor item: {e}")
+        raise HTTPException(500, "Internal server error")
 
 
 # ---------------------------------------------------------------------------
@@ -526,7 +538,8 @@ async def get_queue(request: Request):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(500, f"Failed to get queue: {e}")
+        logger.exception(f"Failed to get queue: {e}")
+        raise HTTPException(500, "Internal server error")
 
 
 @router.delete("/api/queue/{job_id}")
@@ -546,7 +559,8 @@ async def cancel_queue_job(job_id: str, request: Request):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(500, f"Failed to cancel job: {e}")
+        logger.exception(f"Failed to cancel job: {e}")
+        raise HTTPException(500, "Internal server error")
 
 
 # ---------------------------------------------------------------------------
@@ -577,7 +591,8 @@ async def get_trade_summary(job_id: str, request: Request):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(500, f"Failed to get trade summary: {e}")
+        logger.exception(f"Failed to get trade summary: {e}")
+        raise HTTPException(500, "Internal server error")
 
 
 @router.get("/api/projects/{job_id}/summary/overall")
@@ -604,7 +619,8 @@ async def get_overall_summary(job_id: str, request: Request):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(500, f"Failed to get overall summary: {e}")
+        logger.exception(f"Failed to get overall summary: {e}")
+        raise HTTPException(500, "Internal server error")
 
 
 # ---------------------------------------------------------------------------
@@ -633,7 +649,8 @@ async def match_presets(job_id: str, request: Request):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(500, f"Failed to match presets: {e}")
+        logger.exception(f"Failed to match presets: {e}")
+        raise HTTPException(500, "Internal server error")
 
 
 # ---------------------------------------------------------------------------
@@ -643,6 +660,7 @@ async def match_presets(job_id: str, request: Request):
 @router.post("/api/validate-description")
 async def validate_description(request: Request):
     try:
+        user_id = get_optional_user_id(request) or DEV_UUID
         body = await request.json()
         from app.services.anthropic_client import validate_description as do_validate
 
@@ -658,32 +676,43 @@ async def validate_description(request: Request):
             project_type=body.get("project_type", ""),
         )
         return result
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(500, f"Failed to validate description: {e}")
+        logger.exception(f"Failed to validate description: {e}")
+        raise HTTPException(500, "Internal server error")
 
 
 @router.post("/api/transcribe-voice")
 async def transcribe_voice(request: Request, audio: UploadFile = File(...)):
     try:
+        user_id = get_optional_user_id(request) or DEV_UUID
         audio_bytes = await audio.read()
         from app.services.whisper import transcribe
 
         text = await transcribe(audio_bytes, filename=audio.filename or "audio.webm")
         return {"text": text, "duration_seconds": 0}
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(500, f"Failed to transcribe audio: {e}")
+        logger.exception(f"Failed to transcribe audio: {e}")
+        raise HTTPException(500, "Internal server error")
 
 
 @router.post("/api/polish-text")
 async def polish_text(request: Request):
     try:
+        user_id = get_optional_user_id(request) or DEV_UUID
         body = await request.json()
         from app.services.anthropic_client import polish_text as do_polish
 
         text = await do_polish(body.get("text", ""))
         return {"text": text}
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(500, f"Failed to polish text: {e}")
+        logger.exception(f"Failed to polish text: {e}")
+        raise HTTPException(500, "Internal server error")
 
 
 # ---------------------------------------------------------------------------

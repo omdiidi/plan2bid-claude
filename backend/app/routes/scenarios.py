@@ -1,4 +1,5 @@
 import json
+import logging
 import uuid
 from datetime import datetime, timezone
 
@@ -8,6 +9,8 @@ from pydantic import BaseModel
 from app.auth import DEV_UUID, ProjectPermission, get_optional_user_id, get_user_id, require_permission
 from app.db import queries
 from app.db.client import _db
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -113,7 +116,8 @@ async def create_scenario(job_id: str, body: CreateScenarioBody, request: Reques
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(500, f"Failed to create scenario: {e}")
+        logger.exception(f"Failed to create scenario: {e}")
+        raise HTTPException(500, "Internal server error")
 
 
 @router.get("/api/projects/{job_id}/scenarios")
@@ -129,7 +133,8 @@ async def list_scenarios(job_id: str, request: Request):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(500, f"Failed to list scenarios: {e}")
+        logger.exception(f"Failed to list scenarios: {e}")
+        raise HTTPException(500, "Internal server error")
 
 
 @router.get("/api/projects/{job_id}/scenarios/compare")
@@ -187,7 +192,8 @@ async def compare_scenarios(job_id: str, request: Request):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(500, f"Failed to compare scenarios: {e}")
+        logger.exception(f"Failed to compare scenarios: {e}")
+        raise HTTPException(500, "Internal server error")
 
 
 @router.get("/api/projects/{job_id}/scenarios/{scenario_id}")
@@ -243,7 +249,8 @@ async def get_scenario_detail(job_id: str, scenario_id: str, request: Request):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(500, f"Failed to get scenario detail: {e}")
+        logger.exception(f"Failed to get scenario detail: {e}")
+        raise HTTPException(500, "Internal server error")
 
 
 @router.get("/api/projects/{job_id}/scenarios/{scenario_id}/status")
@@ -269,7 +276,8 @@ async def get_scenario_status(job_id: str, scenario_id: str, request: Request):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(500, f"Failed to get scenario status: {e}")
+        logger.exception(f"Failed to get scenario status: {e}")
+        raise HTTPException(500, "Internal server error")
 
 
 @router.delete("/api/projects/{job_id}/scenarios/{scenario_id}")
@@ -290,7 +298,8 @@ async def delete_scenario(job_id: str, scenario_id: str, request: Request):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(500, f"Failed to delete scenario: {e}")
+        logger.exception(f"Failed to delete scenario: {e}")
+        raise HTTPException(500, "Internal server error")
 
 
 @router.patch("/api/projects/{job_id}/scenarios/{scenario_id}")
@@ -318,4 +327,5 @@ async def update_scenario(job_id: str, scenario_id: str, body: UpdateScenarioBod
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(500, f"Failed to update scenario: {e}")
+        logger.exception(f"Failed to update scenario: {e}")
+        raise HTTPException(500, "Internal server error")

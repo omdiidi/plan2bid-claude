@@ -1,3 +1,4 @@
+import logging
 import uuid
 
 from fastapi import APIRouter, HTTPException, Request
@@ -5,6 +6,8 @@ from pydantic import BaseModel
 
 from app.auth import DEV_UUID, ProjectPermission, get_optional_user_id, get_user_id, require_permission
 from app.db import queries
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -57,7 +60,8 @@ async def share_by_email(job_id: str, body: EmailShareBody, request: Request):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(500, f"Failed to share by email: {e}")
+        logger.exception(f"Failed to share by email: {e}")
+        raise HTTPException(500, "Internal server error")
 
 
 @router.post("/api/projects/{job_id}/shares/link")
@@ -86,7 +90,8 @@ async def share_by_link(job_id: str, body: LinkShareBody, request: Request):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(500, f"Failed to create share link: {e}")
+        logger.exception(f"Failed to create share link: {e}")
+        raise HTTPException(500, "Internal server error")
 
 
 @router.post("/api/shares/accept/{token}")
@@ -141,8 +146,8 @@ async def accept_share(token: str, request: Request):
                     "accepted_at": now,
                 }, on_conflict="project_id,shared_with_user_id").execute()
             except Exception as upsert_err:
-                # on_conflict handles duplicates via upsert, so exceptions are real DB errors
-                raise HTTPException(500, f"Failed to create share access: {upsert_err}")
+                logger.exception(f"Failed to create share access: {upsert_err}")
+                raise HTTPException(500, "Internal server error")
         else:
             # Email shares — update the existing row (one-to-one)
             _db().table("project_shares").update({
@@ -158,7 +163,8 @@ async def accept_share(token: str, request: Request):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(500, f"Failed to accept share: {e}")
+        logger.exception(f"Failed to accept share: {e}")
+        raise HTTPException(500, "Internal server error")
 
 
 @router.get("/api/projects/{job_id}/shares")
@@ -175,7 +181,8 @@ async def list_shares(job_id: str, request: Request):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(500, f"Failed to list shares: {e}")
+        logger.exception(f"Failed to list shares: {e}")
+        raise HTTPException(500, "Internal server error")
 
 
 @router.patch("/api/projects/{job_id}/shares/{share_id}")
@@ -196,7 +203,8 @@ async def update_share(job_id: str, share_id: int, request: Request):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(500, f"Failed to update share: {e}")
+        logger.exception(f"Failed to update share: {e}")
+        raise HTTPException(500, "Internal server error")
 
 
 @router.delete("/api/projects/{job_id}/shares/{share_id}")
@@ -213,4 +221,5 @@ async def delete_share(job_id: str, share_id: int, request: Request):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(500, f"Failed to delete share: {e}")
+        logger.exception(f"Failed to delete share: {e}")
+        raise HTTPException(500, "Internal server error")

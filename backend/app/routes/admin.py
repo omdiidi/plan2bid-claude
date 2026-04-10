@@ -1,3 +1,4 @@
+import logging
 import secrets
 
 from fastapi import APIRouter, HTTPException, Request
@@ -6,6 +7,8 @@ from pydantic import BaseModel
 from app.auth import DEV_UUID, get_optional_user_id, get_user_id, require_admin
 from app.db import queries
 from app.db.client import _db
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -24,7 +27,8 @@ async def admin_list_projects(request: Request):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(500, f"Failed to list projects: {e}")
+        logger.exception(f"Failed to list projects: {e}")
+        raise HTTPException(500, "Internal server error")
 
 
 @router.get("/api/admin/users")
@@ -36,7 +40,8 @@ async def admin_list_users(request: Request):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(500, f"Failed to list users: {e}")
+        logger.exception(f"Failed to list users: {e}")
+        raise HTTPException(500, "Internal server error")
 
 
 @router.delete("/api/admin/users/{target_user_id}")
@@ -58,13 +63,15 @@ async def admin_delete_user(target_user_id: str, request: Request):
                 },
             )
             if resp.status_code >= 400:
-                raise HTTPException(resp.status_code, f"Failed to delete user: {resp.text}")
+                logger.error(f"Supabase admin delete user failed: {resp.status_code} {resp.text}")
+                raise HTTPException(resp.status_code, "Failed to delete user")
 
         return {"deleted": True}
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(500, f"Failed to delete user: {e}")
+        logger.exception(f"Failed to delete user: {e}")
+        raise HTTPException(500, "Internal server error")
 
 
 @router.get("/api/admin/feedback")
@@ -76,7 +83,8 @@ async def admin_list_feedback(request: Request):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(500, f"Failed to list feedback: {e}")
+        logger.exception(f"Failed to list feedback: {e}")
+        raise HTTPException(500, "Internal server error")
 
 
 @router.get("/api/admin/tokens")
@@ -88,7 +96,8 @@ async def admin_list_tokens(request: Request):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(500, f"Failed to list tokens: {e}")
+        logger.exception(f"Failed to list tokens: {e}")
+        raise HTTPException(500, "Internal server error")
 
 
 @router.post("/api/admin/tokens")
@@ -108,7 +117,8 @@ async def admin_create_token(body: CreateTokenBody, request: Request):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(500, f"Failed to create token: {e}")
+        logger.exception(f"Failed to create token: {e}")
+        raise HTTPException(500, "Internal server error")
 
 
 @router.delete("/api/admin/tokens/{token_id}")
@@ -121,4 +131,5 @@ async def admin_revoke_token(token_id: int, request: Request):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(500, f"Failed to revoke token: {e}")
+        logger.exception(f"Failed to revoke token: {e}")
+        raise HTTPException(500, "Internal server error")

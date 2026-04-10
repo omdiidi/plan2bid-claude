@@ -1,4 +1,5 @@
 import json
+import logging
 import uuid
 
 from fastapi import APIRouter, HTTPException, Request
@@ -7,6 +8,8 @@ from pydantic import BaseModel
 from app.auth import DEV_UUID, ProjectPermission, get_optional_user_id, get_user_id, require_permission
 from app.db import queries
 from app.db.client import _db
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -54,7 +57,8 @@ async def list_subcontractors(request: Request):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(500, f"Failed to list subcontractors: {e}")
+        logger.exception(f"Failed to list subcontractors: {e}")
+        raise HTTPException(500, "Internal server error")
 
 
 @router.post("/api/subcontractors")
@@ -74,7 +78,8 @@ async def create_subcontractor(body: SubcontractorBody, request: Request):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(500, f"Failed to create subcontractor: {e}")
+        logger.exception(f"Failed to create subcontractor: {e}")
+        raise HTTPException(500, "Internal server error")
 
 
 @router.put("/api/subcontractors/{sub_id}")
@@ -94,7 +99,8 @@ async def update_subcontractor(sub_id: str, body: SubcontractorBody, request: Re
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(500, f"Failed to update subcontractor: {e}")
+        logger.exception(f"Failed to update subcontractor: {e}")
+        raise HTTPException(500, "Internal server error")
 
 
 @router.delete("/api/subcontractors/{sub_id}")
@@ -106,7 +112,8 @@ async def delete_subcontractor(sub_id: str, request: Request):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(500, f"Failed to delete subcontractor: {e}")
+        logger.exception(f"Failed to delete subcontractor: {e}")
+        raise HTTPException(500, "Internal server error")
 
 
 # ---------------------------------------------------------------------------
@@ -138,7 +145,8 @@ async def create_sub_invite(job_id: str, body: CreateInviteBody, request: Reques
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(500, f"Failed to create invite: {e}")
+        logger.exception(f"Failed to create invite: {e}")
+        raise HTTPException(500, "Internal server error")
 
 
 @router.get("/api/projects/{job_id}/sub-invites")
@@ -154,7 +162,8 @@ async def list_sub_invites(job_id: str, request: Request):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(500, f"Failed to list invites: {e}")
+        logger.exception(f"Failed to list invites: {e}")
+        raise HTTPException(500, "Internal server error")
 
 
 @router.get("/api/sub-invites/{token}")
@@ -215,7 +224,8 @@ async def get_sub_invite(token: str):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(500, f"Failed to get invite: {e}")
+        logger.exception(f"Failed to get invite: {e}")
+        raise HTTPException(500, "Internal server error")
 
 
 @router.post("/api/sub-invites/{token}/submit")
@@ -260,7 +270,8 @@ async def submit_bid(token: str, body: SubmitBidBody):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(500, f"Failed to submit bid: {e}")
+        logger.exception(f"Failed to submit bid: {e}")
+        raise HTTPException(500, "Internal server error")
 
 
 @router.get("/api/projects/{job_id}/sub-bids")
@@ -281,7 +292,8 @@ async def get_sub_bids(job_id: str, request: Request):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(500, f"Failed to get sub bids: {e}")
+        logger.exception(f"Failed to get sub bids: {e}")
+        raise HTTPException(500, "Internal server error")
 
 
 @router.get("/api/projects/{job_id}/sub-bids/{trade}")
@@ -297,7 +309,8 @@ async def get_sub_bids_by_trade(job_id: str, trade: str, request: Request):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(500, f"Failed to get bids: {e}")
+        logger.exception(f"Failed to get bids: {e}")
+        raise HTTPException(500, "Internal server error")
 
 
 @router.get("/api/projects/{job_id}/sub-submissions/{submission_id}/detail")
@@ -331,7 +344,8 @@ async def get_sub_bid_detail(job_id: str, submission_id: int, request: Request):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(500, f"Failed to get bid detail: {e}")
+        logger.exception(f"Failed to get bid detail: {e}")
+        raise HTTPException(500, "Internal server error")
 
 
 @router.get("/api/sub-invites/{token}/competitors")
@@ -346,7 +360,8 @@ async def get_competitors(token: str):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(500, f"Failed to get competitors: {e}")
+        logger.exception(f"Failed to get competitors: {e}")
+        raise HTTPException(500, "Internal server error")
 
 
 @router.patch("/api/sub-invites/{token}/claim")
@@ -363,7 +378,8 @@ async def claim_invite(token: str, request: Request):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(500, f"Failed to claim invite: {e}")
+        logger.exception(f"Failed to claim invite: {e}")
+        raise HTTPException(500, "Internal server error")
 
 
 # ---------------------------------------------------------------------------

@@ -1,3 +1,4 @@
+import os
 from enum import Enum
 from fastapi import Request, HTTPException
 from app.db.client import verify_jwt
@@ -11,6 +12,7 @@ class ProjectPermission(str, Enum):
 
 _PERM_LEVEL = {"viewer": 1, "editor": 2, "owner": 3}
 DEV_UUID = "00000000-0000-0000-0000-000000000001"
+_DEV_MODE = os.environ.get("DEV_MODE", "").lower() in ("true", "1", "yes")
 
 
 def get_user_id(request: Request) -> str:
@@ -27,13 +29,17 @@ def get_user_id(request: Request) -> str:
 def get_optional_user_id(request: Request) -> str | None:
     auth_header = request.headers.get("authorization", "")
     if not auth_header.startswith("Bearer "):
-        return None
-    return verify_jwt(auth_header[7:])
+        return DEV_UUID if _DEV_MODE else None
+    token = auth_header[7:]
+    uid = verify_jwt(token)
+    if uid:
+        return uid
+    return DEV_UUID if _DEV_MODE else None
 
 
 def get_project_permission(project: dict, user_id: str | None) -> ProjectPermission | None:
     project_uid = project.get("user_id")
-    if project_uid == DEV_UUID:
+    if _DEV_MODE and project_uid == DEV_UUID:
         return ProjectPermission.OWNER
     if not user_id:
         return None

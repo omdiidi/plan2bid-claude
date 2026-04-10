@@ -1,8 +1,12 @@
+import logging
+
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, field_validator
 
 from app.auth import DEV_UUID, ProjectPermission, get_optional_user_id, get_user_id, require_permission
 from app.db import queries
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -33,7 +37,8 @@ async def submit_feedback(job_id: str, body: FeedbackBody, request: Request):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(500, f"Failed to submit feedback: {e}")
+        logger.exception(f"Failed to submit feedback: {e}")
+        raise HTTPException(500, "Internal server error")
 
 
 @router.get("/api/projects/{job_id}/feedback")
@@ -52,4 +57,5 @@ async def get_feedback(job_id: str, request: Request):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(500, f"Failed to get feedback: {e}")
+        logger.exception(f"Failed to get feedback: {e}")
+        raise HTTPException(500, "Internal server error")

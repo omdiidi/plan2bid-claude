@@ -1,7 +1,11 @@
+import logging
+
 from fastapi import APIRouter, HTTPException, Request
 
 from app.auth import DEV_UUID, ProjectPermission, get_optional_user_id, get_user_id, require_permission
 from app.db import queries
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -18,7 +22,8 @@ async def get_settings(request: Request):
             "settings": row.get("settings") or {},
         }
     except Exception as e:
-        raise HTTPException(500, f"Failed to get settings: {e}")
+        logger.exception(f"Failed to get settings: {e}")
+        raise HTTPException(500, "Internal server error")
 
 
 @router.put("/api/settings")
@@ -32,7 +37,8 @@ async def update_settings(request: Request):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(500, f"Failed to save settings: {e}")
+        logger.exception(f"Failed to save settings: {e}")
+        raise HTTPException(500, "Internal server error")
 
 
 @router.get("/api/projects/{job_id}/overrides")
@@ -51,7 +57,8 @@ async def get_overrides(job_id: str, request: Request):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(500, f"Failed to get overrides: {e}")
+        logger.exception(f"Failed to get overrides: {e}")
+        raise HTTPException(500, "Internal server error")
 
 
 @router.put("/api/projects/{job_id}/overrides")
@@ -69,4 +76,5 @@ async def save_overrides(job_id: str, request: Request):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(500, f"Failed to save overrides: {e}")
+        logger.exception(f"Failed to save overrides: {e}")
+        raise HTTPException(500, "Internal server error")
