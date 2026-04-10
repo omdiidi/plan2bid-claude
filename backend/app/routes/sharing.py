@@ -37,11 +37,11 @@ async def share_by_email(job_id: str, body: EmailShareBody, request: Request):
 
         share_data: dict = {
             "project_id": job_id,
-            "shared_by_user_id": user_id,
-            "email": body.email,
+            "invited_by": user_id,
+            "shared_with_email": body.email,
             "permission": body.permission,
             "share_type": "email",
-            "token": str(uuid.uuid4()),
+            "share_token": str(uuid.uuid4()),
         }
 
         if target_user:
@@ -74,10 +74,10 @@ async def share_by_link(job_id: str, body: LinkShareBody, request: Request):
         token = str(uuid.uuid4())
         share_data = {
             "project_id": job_id,
-            "shared_by_user_id": user_id,
+            "invited_by": user_id,
             "permission": body.permission,
             "share_type": "link",
-            "token": token,
+            "share_token": token,
         }
         row = queries.create_share(share_data)
         return row

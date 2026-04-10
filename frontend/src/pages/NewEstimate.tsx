@@ -388,7 +388,7 @@ export default function NewEstimate() {
     const finalProjectType = projectType === "other" ? `other:${projectTypeOther.trim()}` : projectType;
 
     const formData = new FormData();
-    files.forEach(f => formData.append("files", f));
+    formData.append("zip_file", files[0]);
     formData.append("project_name", projectName);
     formData.append("street_address", address);
     formData.append("city", city);

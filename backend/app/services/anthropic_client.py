@@ -152,12 +152,32 @@ Only include matches where confidence is medium or high. Omit items with no good
         return {"material_matches": [], "labor_matches": []}
 
 
-async def validate_description(description: str, facility_type: str, trade: str) -> dict:
+async def validate_description(
+    description: str,
+    facility_type: str,
+    trade: str,
+    project_name: str = "",
+    city: str = "",
+    state: str = "",
+    zip_code: str = "",
+    project_type: str = "",
+) -> dict:
+    context_parts = []
+    if project_name:
+        context_parts.append(f"Project name: {project_name}")
+    context_parts.append(f"Facility type: {facility_type}")
+    context_parts.append(f"Trade: {trade}")
+    if project_type:
+        context_parts.append(f"Project type: {project_type}")
+    if city or state or zip_code:
+        location = ", ".join(p for p in [city, state, zip_code] if p)
+        context_parts.append(f"Location: {location}")
+    context_parts.append(f"Description: {description}")
+    context_block = "\n".join(context_parts)
+
     prompt = f"""Evaluate this construction project description for completeness.
 
-Facility type: {facility_type}
-Trade: {trade}
-Description: {description}
+{context_block}
 
 Identify missing information that would help produce a better cost estimate.
 Return JSON with this exact structure:

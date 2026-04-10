@@ -519,8 +519,8 @@ async def get_queue(request: Request):
         running = _db().table("estimation_jobs").select("id,project_id").eq("status", "running").execute()
         pending = _db().table("estimation_jobs").select("id,project_id").eq("status", "pending").execute()
         return {
-            "running": running[0]["id"] if running else None,
-            "queued": [{"job_id": j["id"]} for j in pending],
+            "running": {"job_id": running[0]["id"]} if running else None,
+            "queued": [{"job_id": j["id"], "position": i + 1} for i, j in enumerate(pending)],
             "queue_length": len(pending),
         }
     except HTTPException:
@@ -650,6 +650,11 @@ async def validate_description(request: Request):
             description=body.get("description", ""),
             facility_type=body.get("facility_type", ""),
             trade=body.get("trade", ""),
+            project_name=body.get("project_name", ""),
+            city=body.get("city", ""),
+            state=body.get("state", ""),
+            zip_code=body.get("zip_code", ""),
+            project_type=body.get("project_type", ""),
         )
         return result
     except Exception as e:

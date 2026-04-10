@@ -270,13 +270,18 @@ async def get_sub_bids(job_id: str, request: Request):
         project = queries.get_project_by_id(job_id)
         if not project:
             raise HTTPException(404, "Project not found")
-        require_permission(project, user_id, ProjectPermission.OWNER)
+        require_permission(project, user_id, ProjectPermission.VIEWER)
 
-        return queries.get_sub_bids(job_id)
+        bids = queries.get_sub_bids(job_id)
+        bids_by_trade: dict[str, list] = {}
+        for b in bids:
+            trade = b.get("trade", "unknown")
+            bids_by_trade.setdefault(trade, []).append(b)
+        return {"bids_by_trade": bids_by_trade}
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(500, f"Failed to get bids: {e}")
+        raise HTTPException(500, f"Failed to get sub bids: {e}")
 
 
 @router.get("/api/projects/{job_id}/sub-bids/{trade}")
@@ -293,6 +298,25 @@ async def get_sub_bids_by_trade(job_id: str, trade: str, request: Request):
         raise
     except Exception as e:
         raise HTTPException(500, f"Failed to get bids: {e}")
+
+
+@router.get("/api/projects/{job_id}/sub-submissions/{submission_id}/detail")
+async def get_sub_bid_detail(job_id: str, submission_id: int, request: Request):
+    try:
+        user_id = get_optional_user_id(request) or DEV_UUID
+        project = queries.get_project_by_id(job_id)
+        if not project:
+            raise HTTPException(404, "Project not found")
+        require_permission(project, user_id, ProjectPermission.VIEWER)
+
+        rows = _db().table("sub_submissions").select("*").eq("id", submission_id).eq("project_id", job_id).execute()
+        if not rows:
+            raise HTTPException(404, "Submission not found")
+        return rows[0]
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(500, f"Failed to get bid detail: {e}")
 
 
 @router.get("/api/sub-invites/{token}/competitors")

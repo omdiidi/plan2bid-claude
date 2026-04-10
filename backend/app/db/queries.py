@@ -1,4 +1,6 @@
 import json
+from datetime import datetime, timezone
+
 from app.db.client import _db
 
 BATCH_SIZE = 100
@@ -304,7 +306,7 @@ def get_shares_for_project(job_id: str) -> list[dict]:
 
 
 def get_share_by_token(token: str) -> dict | None:
-    rows = _db().table("project_shares").select("*").eq("token", token).execute()
+    rows = _db().table("project_shares").select("*").eq("share_token", token).execute()
     return _first_or_none(rows)
 
 
@@ -463,7 +465,7 @@ def get_sub_invite_by_token(token: str) -> dict | None:
         _db()
         .table("project_shares")
         .select("*")
-        .eq("token", token)
+        .eq("share_token", token)
         .eq("purpose", "bid_request")
         .execute()
     )
@@ -499,7 +501,7 @@ def get_competitor_bids(token: str) -> dict:
 
 
 def claim_invite(token: str, user_id: str):
-    _db().table("project_shares").update({"shared_with_user_id": user_id}).eq("token", token).execute()
+    _db().table("project_shares").update({"shared_with_user_id": user_id}).eq("share_token", token).execute()
 
 
 # ---------------------------------------------------------------------------
@@ -519,6 +521,10 @@ def list_all_users() -> list[dict]:
         roles_by_user.setdefault(uid, []).append(r.get("role"))
     for p in profiles:
         p["roles"] = roles_by_user.get(p.get("id"), [])
+        p["role"] = p["roles"][0] if p["roles"] else "user"
+        p["user_id"] = p.get("id")
+        p["runs_total"] = 0
+        p["runs_today"] = 0
     return profiles
 
 
@@ -546,12 +552,16 @@ def get_signup_token(token: str) -> dict | None:
 
 
 def claim_signup_token(token: str, user_id: str) -> bool:
-    _db().table("signup_tokens").update({"claimed_by": user_id, "claimed": True}).eq("token", token).execute()
+    _db().table("signup_tokens").update({
+        "used_by": user_id,
+        "used_at": datetime.now(timezone.utc).isoformat(),
+        "is_active": False,
+    }).eq("token", token).execute()
     return True
 
 
 def revoke_signup_token(token_id: int) -> bool:
-    _db().table("signup_tokens").update({"revoked": True}).eq("id", token_id).execute()
+    _db().table("signup_tokens").update({"is_active": False}).eq("id", token_id).execute()
     return True
 
 
