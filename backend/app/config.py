@@ -27,4 +27,15 @@ def _load_settings() -> _Settings:
     )
 
 
+def validate_settings(s: _Settings) -> list[str]:
+    warnings = []
+    if not s.SUPABASE_URL:
+        warnings.append("SUPABASE_URL is not set")
+    if not s.SUPABASE_SERVICE_ROLE_KEY:
+        warnings.append("SUPABASE_SERVICE_ROLE_KEY is not set")
+    if not s.SUPABASE_JWT_SECRET or s.SUPABASE_JWT_SECRET.startswith("YOUR_"):
+        warnings.append("SUPABASE_JWT_SECRET is not set or is a placeholder")
+    return warnings
+
+
 settings = _load_settings()

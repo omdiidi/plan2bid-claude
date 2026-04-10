@@ -106,7 +106,7 @@ export default function Dashboard() {
               <Card
                 key={project.id}
                 className="p-5 shadow-card hover:shadow-card-hover transition-shadow cursor-pointer group"
-                onClick={() => navigate(project.status === "running" || project.status === "queued" ? `/progress/${project.id}` : `/results/${project.id}`)}
+                onClick={() => navigate(project.status === "running" || project.status === "queued" || project.status === "error" ? `/progress/${project.id}` : `/results/${project.id}`)}
               >
                 <div className="flex items-start justify-between mb-3">
                   <h3 className="font-semibold text-foreground group-hover:text-accent transition-colors line-clamp-1">{project.name}</h3>

@@ -20,7 +20,17 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Starting Plan2Bid backend...")
+    from app.config import validate_settings
+    config_warnings = validate_settings(settings)
+    for w in config_warnings:
+        logger.warning(f"CONFIG: {w}")
     yield
+    try:
+        from app.db.client import _db
+        _db()._client.close()
+        logger.info("Database client closed.")
+    except Exception:
+        pass
     logger.info("Shutting down...")
 
 
@@ -58,7 +68,7 @@ app.include_router(subcontractors.router)
 app.include_router(feedback.router)
 
 
-@app.get("/health")
+@app.get("/api/health")
 async def health():
     try:
         from app.db.client import _db

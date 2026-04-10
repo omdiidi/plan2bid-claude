@@ -137,9 +137,8 @@ def insert_labor_items(rows: list[dict]):
 
 
 def insert_anomaly_flags(job_id: str, rows: list[dict]):
-    for r in rows:
-        r["project_id"] = job_id
-    _batch_insert("anomaly_flags", rows)
+    safe_rows = [{**r, "project_id": job_id} for r in rows]
+    _batch_insert("anomaly_flags", safe_rows)
 
 
 def delete_extraction_items(job_id: str, trade: str):
@@ -321,12 +320,18 @@ def get_project_share(job_id: str, user_id: str) -> dict | None:
     return _first_or_none(rows)
 
 
-def update_share_permission(share_id: int, permission: str):
-    _db().table("project_shares").update({"permission": permission}).eq("id", share_id).execute()
+def update_share_permission(share_id: int, permission: str, project_id: str = None):
+    q = _db().table("project_shares").update({"permission": permission}).eq("id", share_id)
+    if project_id:
+        q = q.eq("project_id", project_id)
+    q.execute()
 
 
-def delete_share(share_id: int):
-    _db().table("project_shares").delete().eq("id", share_id).execute()
+def delete_share(share_id: int, project_id: str = None):
+    q = _db().table("project_shares").delete().eq("id", share_id)
+    if project_id:
+        q = q.eq("project_id", project_id)
+    q.execute()
 
 
 def get_user_by_email(email: str) -> dict | None:
@@ -420,8 +425,11 @@ def create_subcontractor(data: dict) -> dict:
     return rows[0]
 
 
-def update_subcontractor(sub_id: str, data: dict):
-    _db().table("subcontractors").update(data).eq("id", sub_id).execute()
+def update_subcontractor(sub_id: str, data: dict, user_id: str = None):
+    q = _db().table("subcontractors").update(data).eq("id", sub_id)
+    if user_id:
+        q = q.eq("user_id", user_id)
+    q.execute()
 
 
 def delete_subcontractor(sub_id: str, user_id: str) -> bool:

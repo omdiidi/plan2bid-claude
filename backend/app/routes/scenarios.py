@@ -195,8 +195,8 @@ async def get_scenario_detail(job_id: str, scenario_id: str, request: Request):
         require_permission(project, user_id, ProjectPermission.VIEWER)
 
         scenario = queries.get_scenario_detail(scenario_id)
-        if not scenario:
-            raise HTTPException(404, "Scenario not found")
+        if not scenario or scenario.get("project_id") != job_id:
+            raise HTTPException(404, "Scenario not found in this project")
 
         s_mats = _db().table("scenario_material_items").select("*").eq("scenario_id", scenario_id).execute()
         s_labs = _db().table("scenario_labor_items").select("*").eq("scenario_id", scenario_id).execute()
@@ -251,8 +251,8 @@ async def get_scenario_status(job_id: str, scenario_id: str, request: Request):
         require_permission(project, user_id, ProjectPermission.VIEWER)
 
         scenario = queries.get_scenario_detail(scenario_id)
-        if not scenario:
-            raise HTTPException(404, "Scenario not found")
+        if not scenario or scenario.get("project_id") != job_id:
+            raise HTTPException(404, "Scenario not found in this project")
 
         return {
             "scenario_id": scenario_id,
@@ -276,6 +276,10 @@ async def delete_scenario(job_id: str, scenario_id: str, request: Request):
             raise HTTPException(404, "Project not found")
         require_permission(project, user_id, ProjectPermission.EDITOR)
 
+        scenario = queries.get_scenario_detail(scenario_id)
+        if not scenario or scenario.get("project_id") != job_id:
+            raise HTTPException(404, "Scenario not found in this project")
+
         result = queries.delete_scenario(scenario_id)
         return result
     except HTTPException:
@@ -292,6 +296,10 @@ async def update_scenario(job_id: str, scenario_id: str, body: UpdateScenarioBod
         if not project:
             raise HTTPException(404, "Project not found")
         require_permission(project, user_id, ProjectPermission.EDITOR)
+
+        scenario = queries.get_scenario_detail(scenario_id)
+        if not scenario or scenario.get("project_id") != job_id:
+            raise HTTPException(404, "Scenario not found in this project")
 
         updates = {}
         if body.name is not None:

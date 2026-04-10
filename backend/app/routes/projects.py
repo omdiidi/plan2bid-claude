@@ -62,7 +62,7 @@ async def delete_project(job_id: str, request: Request):
         require_permission(project, user_id, ProjectPermission.OWNER)
 
         if project.get("status") in ("queued", "running"):
-            _db().table("estimation_jobs").update({"status": "cancelled"}).eq("project_id", job_id).eq("status", "pending").execute()
+            _db().table("estimation_jobs").update({"status": "cancelled"}).eq("project_id", job_id).in_("status", ["pending", "running"]).execute()
 
         queries.delete_project(job_id, user_id)
         return {"deleted": True}

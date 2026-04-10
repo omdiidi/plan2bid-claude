@@ -89,7 +89,7 @@ async def update_subcontractor(sub_id: str, body: SubcontractorBody, request: Re
             "trades": json.dumps(body.trades),
             "notes": body.notes,
         }
-        queries.update_subcontractor(sub_id, data)
+        queries.update_subcontractor(sub_id, data, user_id=user_id)
         return {"updated": True}
     except HTTPException:
         raise
@@ -225,6 +225,9 @@ async def submit_bid(token: str, body: SubmitBidBody):
         if not invite:
             raise HTTPException(404, "Invite not found")
 
+        if body.total_bid < 0 or body.total_material < 0 or body.total_labor < 0:
+            raise HTTPException(400, "Bid amounts cannot be negative")
+
         bid_data = {
             "project_id": invite["project_id"],
             "invite_id": invite["id"],
@@ -296,6 +299,11 @@ async def get_competitors(token: str):
 async def claim_invite(token: str, request: Request):
     try:
         user_id = get_optional_user_id(request) or DEV_UUID
+        invite = queries.get_sub_invite_by_token(token)
+        if not invite:
+            raise HTTPException(404, "Invite not found")
+        if invite.get("shared_with_user_id") and invite["shared_with_user_id"] != user_id:
+            raise HTTPException(403, "This invite has already been claimed by another user")
         queries.claim_invite(token, user_id)
         return {"claimed": True}
     except HTTPException:

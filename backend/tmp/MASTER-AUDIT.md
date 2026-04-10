@@ -692,7 +692,7 @@ The skill says at line 83: "The user can always say 'just go with your judgment'
 **What:** DB uses "error" not "failed". "partial" not a valid status.
 
 ### G14: Progress.tsx crash on null status
-**Status:** OPEN
+**Status:** [RESOLVED 2026-04-10] — Fixed: status.warnings.length → activeStatus?.warnings?.length
 **Files:** Progress.tsx:585
 **What:** `status.warnings.length` when status is null.
 
@@ -927,7 +927,7 @@ FastAPI maps the upload parameter name to the multipart field name. If frontend 
 ---
 
 ### H14: Logs sorted newest-first but `.slice(-2)` takes oldest two
-**Status:** OPEN
+**Status:** [RESOLVED 2026-04-10] — Fixed: .slice(-2) → .slice(0, 2)
 
 **Files:**
 - `Progress.tsx:720` — `.slice(-2)` on desc-sorted array

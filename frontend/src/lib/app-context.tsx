@@ -187,9 +187,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     try {
       await apiDeleteProject(id);
       setProjects(prev => prev.filter(p => p.id !== id));
-    } catch {
-      // Optimistically remove from UI even if backend fails
-      setProjects(prev => prev.filter(p => p.id !== id));
+    } catch (err) {
+      console.error("Failed to delete project:", err);
+      // Don't remove from UI on failure — let user retry
     }
   }, []);
 

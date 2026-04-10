@@ -247,13 +247,14 @@ async def get_estimate_status(job_id: str, request: Request):
                 if job_row:
                     job_created = job_row[0].get("created_at", "")
                     ahead = _db().table("estimation_jobs").select("id,created_at").eq("status", "pending").execute()
-                    queue_position = sum(1 for j in ahead if (j.get("created_at") or "") < job_created)
+                    queue_position = sum(1 for j in ahead if (j.get("created_at") or "") < job_created) + 1
 
         return {
             "status": status,
             "stage": project.get("stage", "queued"),
             "message": project.get("message", ""),
             "progress": project.get("progress", 0),
+            "error": project.get("error_message"),
             "estimate_id": job_id if status == "completed" else None,
             "queue_position": queue_position,
             "queued_at": project.get("queued_at"),
@@ -285,7 +286,6 @@ async def get_estimate(job_id: str, request: Request):
         material_items = queries.get_material_items(job_id)
         labor_items = queries.get_labor_items(job_id)
         anomalies = queries.get_anomaly_flags(job_id)
-        mat_meta = queries.get_all_material_metadata(job_id)
         lab_meta = queries.get_all_labor_metadata(job_id)
         ext_meta = queries.get_all_extraction_metadata(job_id)
 
@@ -513,19 +513,26 @@ async def update_labor_item(job_id: str, item_id: str, request: Request):
 # ---------------------------------------------------------------------------
 
 @router.get("/api/queue")
-async def get_queue():
-    running = _db().table("estimation_jobs").select("id,project_id").eq("status", "running").execute()
-    pending = _db().table("estimation_jobs").select("id,project_id").eq("status", "pending").execute()
-    return {
-        "running": running[0]["id"] if running else None,
-        "queued": [{"job_id": j["id"]} for j in pending],
-        "queue_length": len(pending),
-    }
+async def get_queue(request: Request):
+    try:
+        user_id = get_optional_user_id(request) or DEV_UUID
+        running = _db().table("estimation_jobs").select("id,project_id").eq("status", "running").execute()
+        pending = _db().table("estimation_jobs").select("id,project_id").eq("status", "pending").execute()
+        return {
+            "running": running[0]["id"] if running else None,
+            "queued": [{"job_id": j["id"]} for j in pending],
+            "queue_length": len(pending),
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(500, f"Failed to get queue: {e}")
 
 
 @router.delete("/api/queue/{job_id}")
-async def cancel_queue_job(job_id: str):
+async def cancel_queue_job(job_id: str, request: Request):
     try:
+        user_id = get_optional_user_id(request) or DEV_UUID
         result = _db().table("estimation_jobs").update({"status": "cancelled"}).eq("id", job_id).eq("status", "pending").execute()
         cancelled = len(result) > 0
         return {"cancelled": cancelled}

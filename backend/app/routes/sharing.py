@@ -3,7 +3,7 @@ import uuid
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 
-from app.auth import DEV_UUID, ProjectPermission, get_user_id, require_permission
+from app.auth import DEV_UUID, ProjectPermission, get_optional_user_id, get_user_id, require_permission
 from app.db import queries
 
 router = APIRouter()
@@ -26,6 +26,9 @@ async def share_by_email(job_id: str, body: EmailShareBody, request: Request):
         if not project:
             raise HTTPException(404, "Project not found")
         require_permission(project, user_id, ProjectPermission.OWNER)
+
+        if body.permission not in ("viewer", "editor"):
+            raise HTTPException(400, "Invalid permission. Must be 'viewer' or 'editor'.")
 
         target_user = queries.get_user_by_email(body.email)
 
@@ -65,6 +68,9 @@ async def share_by_link(job_id: str, body: LinkShareBody, request: Request):
             raise HTTPException(404, "Project not found")
         require_permission(project, user_id, ProjectPermission.OWNER)
 
+        if body.permission not in ("viewer", "editor"):
+            raise HTTPException(400, "Invalid permission. Must be 'viewer' or 'editor'.")
+
         token = str(uuid.uuid4())
         share_data = {
             "project_id": job_id,
@@ -92,6 +98,11 @@ async def accept_share(token: str, request: Request):
         project = queries.get_project_by_id(share["project_id"])
         if not project:
             raise HTTPException(404, "Project not found")
+
+        if share.get("share_type") == "email" and share.get("email"):
+            user_profile = queries.get_user_by_email(share["email"])
+            if user_profile and user_profile.get("id") != user_id:
+                raise HTTPException(403, "This share was sent to a different email address")
 
         if project.get("user_id") == user_id:
             raise HTTPException(400, "You already own this project")
@@ -144,7 +155,7 @@ async def update_share(job_id: str, share_id: int, request: Request):
         permission = body.get("permission")
         if permission not in ("viewer", "editor"):
             raise HTTPException(400, "Invalid permission")
-        queries.update_share_permission(share_id, permission)
+        queries.update_share_permission(share_id, permission, project_id=job_id)
         return {"updated": True}
     except HTTPException:
         raise
@@ -161,7 +172,7 @@ async def delete_share(job_id: str, share_id: int, request: Request):
             raise HTTPException(404, "Project not found")
         require_permission(project, user_id, ProjectPermission.OWNER)
 
-        queries.delete_share(share_id)
+        queries.delete_share(share_id, project_id=job_id)
         return {"deleted": True}
     except HTTPException:
         raise

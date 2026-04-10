@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, Request
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 from app.auth import DEV_UUID, ProjectPermission, get_optional_user_id, get_user_id, require_permission
 from app.db import queries
@@ -10,6 +10,13 @@ router = APIRouter()
 class FeedbackBody(BaseModel):
     rating: str
     message: str | None = None
+
+    @field_validator("rating")
+    @classmethod
+    def validate_rating(cls, v):
+        if v not in ("high", "low", "spot_on"):
+            raise ValueError("rating must be 'high', 'low', or 'spot_on'")
+        return v
 
 
 @router.post("/api/projects/{job_id}/feedback")

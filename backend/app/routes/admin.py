@@ -3,7 +3,7 @@ import secrets
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 
-from app.auth import get_user_id, require_admin
+from app.auth import DEV_UUID, get_optional_user_id, get_user_id, require_admin
 from app.db import queries
 from app.db.client import _db
 
