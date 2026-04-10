@@ -228,6 +228,21 @@ async def submit_bid(token: str, body: SubmitBidBody):
         if body.total_bid < 0 or body.total_material < 0 or body.total_labor < 0:
             raise HTTPException(400, "Bid amounts cannot be negative")
 
+        trades_scope_raw = invite.get("trades_scope", "[]")
+        if isinstance(trades_scope_raw, str):
+            try:
+                parsed = json.loads(trades_scope_raw)
+                trades_scope = parsed if isinstance(parsed, list) else []
+            except (json.JSONDecodeError, TypeError):
+                trades_scope = []
+        elif isinstance(trades_scope_raw, list):
+            trades_scope = trades_scope_raw
+        else:
+            trades_scope = []
+
+        if trades_scope and body.trade not in trades_scope:
+            raise HTTPException(400, f"Trade '{body.trade}' is not in the invite's scope: {trades_scope}")
+
         bid_data = {
             "project_id": invite["project_id"],
             "invite_id": invite["id"],

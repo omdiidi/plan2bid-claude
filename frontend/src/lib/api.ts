@@ -85,7 +85,9 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
       throw new ApiError(res.status, `API error: ${res.status}`, body);
     }
 
-    return (await res.json()) as T;
+    const text = await res.text();
+    if (!text) return {} as T;
+    return JSON.parse(text) as T;
   } catch (err) {
     if (err instanceof ApiError) throw err;
     throw new ApiError(0, `Network error: ${(err as Error).message}`);

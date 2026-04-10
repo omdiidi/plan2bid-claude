@@ -298,11 +298,6 @@ export default function Progress() {
   const [status, setStatus] = useState<EstimateStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [logsOpen, setLogsOpen] = useState(false);
-  const [logsUnlocked, setLogsUnlocked] = useState(false);
-  const [showPasswordPrompt, setShowPasswordPrompt] = useState(false);
-  const [passwordInput, setPasswordInput] = useState("");
-  const [passwordShake, setPasswordShake] = useState(false);
-  const passwordRef = useRef<HTMLInputElement>(null);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Measure visualization container for canvas scaling (iPad optimization)
@@ -722,90 +717,36 @@ export default function Progress() {
           </div>
         </Card>
 
-        {/* ── Dev logs gate ── */}
+        {/* ── Live logs ── */}
         {logs.length > 0 && (
-          <>
-            {logsUnlocked ? (
-              <Collapsible open={logsOpen} onOpenChange={setLogsOpen}>
-                <Card className="shadow-card overflow-hidden">
-                  <div className="flex items-center">
-                    <CollapsibleTrigger asChild>
-                      <button className="flex-1 flex items-center justify-between p-4 hover:bg-muted/50 transition-colors">
-                        <span className="text-sm font-semibold text-foreground">Live Logs ({logs.length})</span>
-                        {logsOpen ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
-                      </button>
-                    </CollapsibleTrigger>
-                    <button
-                      onClick={() => { setLogsUnlocked(false); setLogsOpen(false); }}
-                      className="px-3 py-2 mr-1 text-muted-foreground/30 hover:text-muted-foreground/50 transition-colors"
-                      title="Lock"
-                    >
-                      <XCircle className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                  {!logsOpen && (
-                    <div className="px-4 pb-3 space-y-1">
-                      {logs.slice(0, 2).map((log, i) => (
-                        <p key={i} className={`text-xs font-mono ${log.level === "warning" ? "text-warning" : log.level === "error" ? "text-destructive" : "text-muted-foreground"}`}>
-                          [{log.level.toUpperCase()}] {log.message}
-                        </p>
-                      ))}
-                    </div>
-                  )}
-                  <CollapsibleContent>
-                    <div className="px-4 pb-4 max-h-64 overflow-y-auto space-y-1">
-                      {logs.map((log, i) => (
-                        <p key={i} className={`text-xs font-mono ${log.level === "warning" ? "text-warning" : log.level === "error" ? "text-destructive" : "text-muted-foreground"}`}>
-                          [{log.level.toUpperCase()}] {log.message}
-                        </p>
-                      ))}
-                    </div>
-                  </CollapsibleContent>
-                </Card>
-              </Collapsible>
-            ) : (
-              <div className="flex items-center justify-center gap-2 py-3">
-                {!showPasswordPrompt ? (
-                  <button
-                    onClick={() => { setShowPasswordPrompt(true); setTimeout(() => passwordRef.current?.focus(), 50); }}
-                    className="text-xs text-muted-foreground/50 hover:text-muted-foreground/70 transition-colors select-none px-3 py-1"
-                  >
-                    ···
-                  </button>
-                ) : (
-                  <form
-                    className="flex items-center gap-2"
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      if (passwordInput === "admin123") {
-                        setLogsUnlocked(true);
-                        setShowPasswordPrompt(false);
-                        setPasswordInput("");
-                      } else {
-                        setPasswordShake(true);
-                        setPasswordInput("");
-                        setTimeout(() => setPasswordShake(false), 500);
-                      }
-                    }}
-                  >
-                    <input
-                      ref={passwordRef}
-                      type="password"
-                      value={passwordInput}
-                      onChange={(e) => setPasswordInput(e.target.value)}
-                      onBlur={() => { if (!passwordInput) { setShowPasswordPrompt(false); } }}
-                      className={`text-xs bg-transparent border-b border-muted-foreground/30 outline-none w-32 py-1 text-muted-foreground placeholder:text-muted-foreground/30 ${passwordShake ? "animate-shake" : ""}`}
-                      placeholder="password"
-                      autoComplete="off"
-                    />
-                    <button type="submit" className="text-[10px] text-muted-foreground/30 hover:text-muted-foreground/50 transition-colors">
-                      go
-                    </button>
-                  </form>
-                )}
-              </div>
-            )}
-          </>
+          <Collapsible open={logsOpen} onOpenChange={setLogsOpen}>
+            <Card className="shadow-card overflow-hidden">
+              <CollapsibleTrigger asChild>
+                <button className="w-full flex items-center justify-between p-4 hover:bg-muted/50 transition-colors">
+                  <span className="text-sm font-semibold text-foreground">Live Logs ({logs.length})</span>
+                  {logsOpen ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+                </button>
+              </CollapsibleTrigger>
+              {!logsOpen && (
+                <div className="px-4 pb-3 space-y-1">
+                  {logs.slice(0, 2).map((log, i) => (
+                    <p key={i} className={`text-xs font-mono ${log.level === "warning" ? "text-warning" : log.level === "error" ? "text-destructive" : "text-muted-foreground"}`}>
+                      [{log.level.toUpperCase()}] {log.message}
+                    </p>
+                  ))}
+                </div>
+              )}
+              <CollapsibleContent>
+                <div className="px-4 pb-4 max-h-64 overflow-y-auto space-y-1">
+                  {logs.map((log, i) => (
+                    <p key={i} className={`text-xs font-mono ${log.level === "warning" ? "text-warning" : log.level === "error" ? "text-destructive" : "text-muted-foreground"}`}>
+                      [{log.level.toUpperCase()}] {log.message}
+                    </p>
+                  ))}
+                </div>
+              </CollapsibleContent>
+            </Card>
+          </Collapsible>
         )}
       </div>
     </div>

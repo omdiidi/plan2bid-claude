@@ -533,9 +533,18 @@ async def get_queue(request: Request):
 async def cancel_queue_job(job_id: str, request: Request):
     try:
         user_id = get_optional_user_id(request) or DEV_UUID
+
+        job = _db().table("estimation_jobs").select("user_id").eq("id", job_id).execute()
+        if not job:
+            raise HTTPException(404, "Job not found")
+        if job[0].get("user_id") != user_id and user_id != DEV_UUID:
+            raise HTTPException(403, "You can only cancel your own jobs")
+
         result = _db().table("estimation_jobs").update({"status": "cancelled"}).eq("id", job_id).eq("status", "pending").execute()
         cancelled = len(result) > 0
         return {"cancelled": cancelled}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(500, f"Failed to cancel job: {e}")
 

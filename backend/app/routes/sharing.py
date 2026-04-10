@@ -95,9 +95,15 @@ async def accept_share(token: str, request: Request):
         if not share:
             raise HTTPException(404, "Share not found")
 
+        if share.get("purpose") == "bid_request":
+            raise HTTPException(400, "Bid invite tokens cannot be used to accept project shares")
+
         project = queries.get_project_by_id(share["project_id"])
         if not project:
             raise HTTPException(404, "Project not found")
+
+        # Link shares are reusable — multiple users can accept.
+        # The existing_share check below (line 117) prevents duplicate access per user.
 
         if share.get("share_type") == "email" and share.get("email"):
             user_profile = queries.get_user_by_email(share["email"])
@@ -112,13 +118,37 @@ async def accept_share(token: str, request: Request):
             raise HTTPException(400, "You already have access to this project")
 
         from app.db.client import _db
+        from datetime import datetime, timezone
 
-        _db().table("project_shares").update({
-            "shared_with_user_id": user_id,
-            "accepted_at": "now()",
-        }).eq("id", share["id"]).execute()
+        now = datetime.now(timezone.utc).isoformat()
 
-        return {"accepted": True, "project_id": share["project_id"]}
+        if share.get("share_type") == "link":
+            # Link shares are reusable — create a NEW share row per accepting user
+            # Use upsert to handle concurrent duplicate accepts gracefully
+            try:
+                _db().table("project_shares").upsert({
+                    "project_id": share["project_id"],
+                    "invited_by": share.get("shared_by_user_id") or share.get("invited_by"),
+                    "shared_with_user_id": user_id,
+                    "permission": share.get("permission", "viewer"),
+                    "share_type": "link",
+                    "accepted_at": now,
+                }, on_conflict="project_id,shared_with_user_id").execute()
+            except Exception as upsert_err:
+                # on_conflict handles duplicates via upsert, so exceptions are real DB errors
+                raise HTTPException(500, f"Failed to create share access: {upsert_err}")
+        else:
+            # Email shares — update the existing row (one-to-one)
+            _db().table("project_shares").update({
+                "shared_with_user_id": user_id,
+                "accepted_at": now,
+            }).eq("id", share["id"]).execute()
+
+        return {
+            "status": "accepted",
+            "project_id": share["project_id"],
+            "permission": share.get("permission", "viewer"),
+        }
     except HTTPException:
         raise
     except Exception as e:

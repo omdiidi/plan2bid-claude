@@ -88,6 +88,11 @@ async def create_scenario(job_id: str, body: CreateScenarioBody, request: Reques
             raise HTTPException(404, "Project not found")
         require_permission(project, user_id, ProjectPermission.EDITOR)
 
+        if body.parent_scenario_id:
+            parent = queries.get_scenario_detail(body.parent_scenario_id)
+            if not parent or parent.get("project_id") != job_id:
+                raise HTTPException(400, "Parent scenario does not belong to this project")
+
         scenario_id = f"scn_{uuid.uuid4().hex[:12]}"
         name = body.name or f"Scenario {datetime.now(timezone.utc).strftime('%b %d %H:%M')}"
 
