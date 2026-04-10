@@ -12,7 +12,9 @@ export default function Dashboard() {
 
   const completedProjects = projects.filter(p => p.status === "completed");
   const totalEstimates = completedProjects.reduce((sum, p) => sum + (p.totalEstimate || 0), 0);
-  const recentProjects = projects.slice(0, 6);
+  const recentProjects = [...projects].sort((a, b) =>
+    new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+  ).slice(0, 6);
   const hasProjects = projects.length > 0;
 
   return (

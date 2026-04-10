@@ -17,8 +17,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        setSession(session);
+      (event, session) => {
+        if (event === 'SIGNED_OUT') {
+          setSession(null);
+        } else if (event === 'TOKEN_REFRESHED' && !session) {
+          setSession(null);
+        } else {
+          setSession(session);
+        }
         setLoading(false);
       }
     );

@@ -496,8 +496,22 @@ def get_competitor_bids(token: str) -> dict:
     invite = get_sub_invite_by_token(token)
     if not invite:
         return {"invite": None, "bids": []}
-    bids = get_sub_bids_by_trade(invite["project_id"], invite.get("trade", ""))
-    return {"invite": invite, "bids": bids}
+    trades_scope_raw = invite.get("trades_scope", "[]")
+    if isinstance(trades_scope_raw, str):
+        try:
+            trades_scope = json.loads(trades_scope_raw)
+        except (json.JSONDecodeError, TypeError):
+            trades_scope = []
+    elif isinstance(trades_scope_raw, list):
+        trades_scope = trades_scope_raw
+    else:
+        trades_scope = []
+
+    all_bids = []
+    for trade in (trades_scope or [""]):
+        bids = get_sub_bids_by_trade(invite["project_id"], trade)
+        all_bids.extend(bids)
+    return {"invite": invite, "bids": all_bids}
 
 
 def claim_invite(token: str, user_id: str):

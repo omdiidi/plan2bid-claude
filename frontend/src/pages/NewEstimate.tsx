@@ -413,6 +413,7 @@ export default function NewEstimate() {
     try {
       const { job_id } = await createEstimate(formData);
       toast.success("Estimate started", { description: "Your documents are being processed." });
+      setIsSubmitting(false);
       navigate(`/progress/${job_id}`);
     } catch (err) {
       const isApiErr = err instanceof ApiError;

@@ -193,6 +193,9 @@ async def get_sub_invite(token: str):
         else:
             trades_scope = trades_scope_raw
 
+        if trades_scope:
+            line_items = [li for li in line_items if li.get("_trade") in trades_scope]
+
         trade_sections: dict[str, list] = {}
         trade_subtotals: dict[str, dict] = {}
         for item in line_items:
