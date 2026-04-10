@@ -50,7 +50,7 @@ const THEME = {
   dash2Border: "rgba(60,120,220,.2)",
 } as const;
 
-// ─── Stage mapping (matches backend orchestrator.py exactly) ─────────────────
+// ─── Stage mapping (visual stages — worker reports ingestion + extraction, rest are interpolated) ─
 const STAGE_DISPLAY: Record<string, { name: string; subtitle: string }> = {
   ingestion:     { name: "File Upload & Extraction",     subtitle: "Extracting and validating documents from ZIP" },
   parsing:       { name: "Document Parsing",             subtitle: "Parsing pages" },
@@ -368,10 +368,38 @@ export default function Progress() {
   const isFailed = activeStatus?.status === "error";
   const isQueued = activeStatus?.status === "queued";
   const queuePosition = activeStatus?.queue_position;
-  const progress = activeStatus?.progress ?? 0;
+  const serverProgress = activeStatus?.progress ?? 0;
   const currentStage = activeStatus?.stage ?? "";
   const logs = activeStatus?.logs ?? [];
 
+  // Smooth progress interpolation — worker only reports 5% and 10%, then jumps to completed.
+  // We interpolate the displayed progress to avoid a jarring 10% → 100% jump.
+  const [displayProgress, setDisplayProgress] = useState(0);
+
+  useEffect(() => {
+    const isRunning = activeStatus?.status === "running";
+
+    if (!isRunning) {
+      setDisplayProgress(activeStatus?.status === "completed" ? 100 : serverProgress);
+      return;
+    }
+
+    // Jump to at least server progress
+    setDisplayProgress(prev => Math.max(serverProgress, prev));
+
+    const interval = setInterval(() => {
+      setDisplayProgress(prev => {
+        if (prev >= 90) return 90; // Cap at 90% while running
+        const remaining = 90 - prev;
+        const increment = Math.max(0.3, remaining * 0.02);
+        return Math.min(90, prev + increment);
+      });
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [activeStatus?.status, serverProgress]);
+
+  const progress = displayProgress;
   const stageDisplay = STAGE_DISPLAY[currentStage] ?? { name: currentStage, subtitle: "" };
 
   // Progress ring dasharray
@@ -602,7 +630,7 @@ export default function Progress() {
                   <p className="font-semibold text-foreground">Estimate Complete</p>
                   <p className="text-sm text-muted-foreground">
                     {activeStatus?.warnings?.length
-                      ? `Completed with ${status.warnings.length} warning${status.warnings.length > 1 ? "s" : ""}`
+                      ? `Completed with ${activeStatus.warnings.length} warning${activeStatus.warnings.length > 1 ? "s" : ""}`
                       : "All stages completed successfully"}
                   </p>
                 </div>
@@ -717,7 +745,7 @@ export default function Progress() {
                   </div>
                   {!logsOpen && (
                     <div className="px-4 pb-3 space-y-1">
-                      {logs.slice(-2).map((log, i) => (
+                      {logs.slice(0, 2).map((log, i) => (
                         <p key={i} className={`text-xs font-mono ${log.level === "warning" ? "text-warning" : log.level === "error" ? "text-destructive" : "text-muted-foreground"}`}>
                           [{log.level.toUpperCase()}] {log.message}
                         </p>
