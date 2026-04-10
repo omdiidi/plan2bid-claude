@@ -267,7 +267,7 @@ Since no scenario can be inserted, the downstream `estimation_jobs` row (which r
 ---
 
 ### A5: NameError crashes in 3 route files
-**Status:** OPEN
+**Status:** [RESOLVED 2026-04-10] — Fixed imports in sharing.py, admin.py, auth_routes.py
 **Root Cause:** When the codebase was refactored to use `get_optional_user_id` + DEV_UUID fallback, the imports in these 3 files were not updated.
 
 **Files:**
@@ -360,7 +360,7 @@ The permission check says: "if this project is owned by DEV_UUID, return OWNER r
 ---
 
 ### B4: Queue endpoints have zero authentication
-**Status:** OPEN
+**Status:** [RESOLVED 2026-04-10] — Queue endpoints now have auth + ownership check
 
 **Files:**
 - `estimates.py:458` -- `async def get_queue():` -- no Request parameter
@@ -458,7 +458,7 @@ The skill says at line 83: "The user can always say 'just go with your judgment'
 ## C: FRONTEND-BACKEND DATA CONTRACT MISMATCHES
 
 ### C1: Status endpoint doesn't return error messages
-**Status:** OPEN
+**Status:** [RESOLVED 2026-04-10] — Added error field to status endpoint
 **Files:** estimates.py:252-262, Progress.tsx:317,553
 **Root Cause:** The status response dict was built without an `error` key. The `error_message` column exists in the DB but is never included.
 **Frontend expects:** `data.error` for toast message
@@ -467,7 +467,7 @@ The skill says at line 83: "The user can always say 'just go with your judgment'
 **Fix:** Add `"error": project.get("error_message")` to status response.
 
 ### C2: Share accept never redirects
-**Status:** OPEN
+**Status:** [RESOLVED 2026-04-10] — Returns status:accepted with permission
 **Files:** api.ts:491-494, sharing.py:110, AcceptShare.tsx:24
 **Root Cause:** Frontend checks `res.status === "accepted"`. Backend returns `{"accepted": True}` -- no `status` field.
 **Result:** `res.status` is undefined, condition is false, user never redirected after accepting share.
@@ -487,7 +487,7 @@ The skill says at line 83: "The user can always say 'just go with your judgment'
 **Result:** Admin dashboard shows "undefined" for role, 0 for run counts.
 
 ### C5: Health endpoint 404
-**Status:** OPEN
+**Status:** [RESOLVED 2026-04-10] — Health at /api/health
 **Files:** api.ts:657, main.py:61
 **Root Cause:** Frontend prefixes `/api` to all requests. Backend registers health at `/health` not `/api/health`.
 **Fix:** Change backend to `@app.get("/api/health")`.
@@ -614,7 +614,7 @@ The skill says at line 83: "The user can always say 'just go with your judgment'
 **What:** httpx error text (table names, columns) in 500 responses.
 
 ### F6: Subcontractor update missing ownership check
-**Status:** OPEN
+**Status:** [RESOLVED 2026-04-10] — Subcontractor update has user_id check
 **Files:** subcontractors.py:80-97, queries.py:415
 **What:** `update_subcontractor` filters only by sub_id, not user_id.
 
@@ -638,7 +638,7 @@ The skill says at line 83: "The user can always say 'just go with your judgment'
 **What:** Code writes `claimed_by`/`claimed`. Schema has `used_by`/`is_active`.
 
 ### G3: accepted_at = "now()" stored as literal string
-**Status:** OPEN
+**Status:** [RESOLVED 2026-04-10] — Uses datetime.now(UTC).isoformat()
 **Files:** sharing.py:49,107
 **What:** PostgREST doesn't evaluate SQL. "now()" is stored as text.
 
@@ -658,7 +658,7 @@ The skill says at line 83: "The user can always say 'just go with your judgment'
 **What:** Only ingestion and extraction stages set. Progress stalls at 10%.
 
 ### G7: material_metadata fetched but unused
-**Status:** OPEN
+**Status:** [RESOLVED 2026-04-10] — Dead mat_meta fetch removed
 **Files:** estimates.py:288
 **What:** `mat_meta = queries.get_all_material_metadata(job_id)` called but never used in response.
 
@@ -697,7 +697,7 @@ The skill says at line 83: "The user can always say 'just go with your judgment'
 **What:** `status.warnings.length` when status is null.
 
 ### G15: deleteProject removes UI on failure
-**Status:** OPEN
+**Status:** [RESOLVED 2026-04-10] — Catch block no longer removes from UI
 **Files:** app-context.tsx:179-187
 **What:** Project removed from UI even when API delete fails.
 
@@ -712,7 +712,7 @@ The skill says at line 83: "The user can always say 'just go with your judgment'
 **What:** `projects.slice(0, 6)` without sort.
 
 ### G18: Error projects routed to Results page
-**Status:** OPEN
+**Status:** [RESOLVED 2026-04-10] — Error projects route to Progress
 **Files:** Dashboard.tsx:109
 **What:** Only running/queued go to Progress. Error goes to Results which may crash.
 
@@ -776,7 +776,7 @@ FastAPI maps the upload parameter name to the multipart field name. If frontend 
 ---
 
 ### H2: Share creation allows `permission: "owner"` — privilege escalation
-**Status:** OPEN
+**Status:** [RESOLVED 2026-04-10] — Rejects permission != viewer/editor
 **Root Cause:** `EmailShareBody.permission` and `LinkShareBody.permission` accept any string. Create endpoints don't validate; update endpoint does.
 
 **Files:**
@@ -792,7 +792,7 @@ FastAPI maps the upload parameter name to the multipart field name. If frontend 
 ---
 
 ### H3: Share update/delete IDOR — cross-project share manipulation
-**Status:** OPEN
+**Status:** [RESOLVED 2026-04-10] — Scoped to project_id
 **Root Cause:** `queries.update_share_permission` and `queries.delete_share` filter only by share `id`, not by `project_id`.
 
 **Files:**
@@ -819,7 +819,7 @@ FastAPI maps the upload parameter name to the multipart field name. If frontend 
 ---
 
 ### H5: Claim-invite hijack — any user can claim any invite
-**Status:** OPEN
+**Status:** [RESOLVED 2026-04-10] — Checks existing claimant
 **Root Cause:** `claim_invite` does unconditional UPDATE with no check for existing claimant.
 
 **Files:**
@@ -939,7 +939,7 @@ FastAPI maps the upload parameter name to the multipart field name. If frontend 
 ---
 
 ### H15: Queue position off-by-one
-**Status:** OPEN
+**Status:** [RESOLVED 2026-04-10] — Queue position 1-indexed
 
 **Files:**
 - `estimates.py:249-250` — returns 0-indexed count
@@ -951,7 +951,7 @@ FastAPI maps the upload parameter name to the multipart field name. If frontend 
 ---
 
 ### H16: Scenario endpoints don't verify scenario belongs to project — IDOR
-**Status:** OPEN
+**Status:** [RESOLVED 2026-04-10] — Scenario endpoints verify project ownership
 
 **Files:**
 - `scenarios.py:270-284` — delete validates project permission but not scenario ownership
@@ -964,7 +964,7 @@ FastAPI maps the upload parameter name to the multipart field name. If frontend 
 ---
 
 ### H17: Deleting running project doesn't cancel running jobs
-**Status:** OPEN
+**Status:** [RESOLVED 2026-04-10] — Cancels pending+running jobs
 
 **Files:**
 - `projects.py:64-65` — only cancels `pending` jobs
@@ -975,7 +975,7 @@ FastAPI maps the upload parameter name to the multipart field name. If frontend 
 ---
 
 ### H18: `insert_anomaly_flags` mutates input rows in-place
-**Status:** OPEN
+**Status:** [RESOLVED 2026-04-10] — Uses spread instead of mutation
 
 **Files:**
 - `queries.py:139-142` — sets `r["project_id"]` on each dict
@@ -986,7 +986,7 @@ FastAPI maps the upload parameter name to the multipart field name. If frontend 
 ---
 
 ### H19: Email shares can be accepted by wrong user
-**Status:** OPEN
+**Status:** [RESOLVED 2026-04-10] — Validates email match
 
 **Files:**
 - `sharing.py:84-114` — no email verification on accept
@@ -1018,7 +1018,7 @@ FastAPI maps the upload parameter name to the multipart field name. If frontend 
 ---
 
 ### H22: Negative bid amounts accepted
-**Status:** OPEN
+**Status:** [RESOLVED 2026-04-10] — Rejects negative amounts
 
 **Files:**
 - `subcontractors.py:34-42` — `total_bid: float` has no lower bound
@@ -1028,7 +1028,7 @@ FastAPI maps the upload parameter name to the multipart field name. If frontend 
 ---
 
 ### H23: FeedbackBody.rating accepts any string
-**Status:** OPEN
+**Status:** [RESOLVED 2026-04-10] — Rating validated via field_validator
 
 **Files:**
 - `feedback.py:11` — `rating: str` with no validation
@@ -1048,7 +1048,7 @@ FastAPI maps the upload parameter name to the multipart field name. If frontend 
 ---
 
 ### H25: httpx Client never closed on shutdown
-**Status:** OPEN
+**Status:** [RESOLVED 2026-04-10] — Client closed in lifespan
 
 **Files:**
 - `client.py:161,177-184` — singleton created, never closed
@@ -1059,7 +1059,7 @@ FastAPI maps the upload parameter name to the multipart field name. If frontend 
 ---
 
 ### H26: Results.tsx export uses snake_case instead of camelCase for project fields
-**Status:** OPEN
+**Status:** [RESOLVED 2026-04-10] — Uses camelCase project fields
 
 **Files:**
 - `Results.tsx:547-548` — `project?.facility_type` and `project?.project_type`
