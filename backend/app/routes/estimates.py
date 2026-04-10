@@ -660,7 +660,8 @@ async def match_presets(job_id: str, request: Request):
 @router.post("/api/validate-description")
 async def validate_description(request: Request):
     try:
-        user_id = get_optional_user_id(request) or DEV_UUID
+        from app.auth import get_required_user_id
+        get_required_user_id(request)  # enforce auth — burns API credits
         body = await request.json()
         from app.services.anthropic_client import validate_description as do_validate
 
@@ -686,7 +687,8 @@ async def validate_description(request: Request):
 @router.post("/api/transcribe-voice")
 async def transcribe_voice(request: Request, audio: UploadFile = File(...)):
     try:
-        user_id = get_optional_user_id(request) or DEV_UUID
+        from app.auth import get_required_user_id
+        get_required_user_id(request)  # enforce auth — burns API credits
         audio_bytes = await audio.read()
         from app.services.whisper import transcribe
 
@@ -702,7 +704,8 @@ async def transcribe_voice(request: Request, audio: UploadFile = File(...)):
 @router.post("/api/polish-text")
 async def polish_text(request: Request):
     try:
-        user_id = get_optional_user_id(request) or DEV_UUID
+        from app.auth import get_required_user_id
+        get_required_user_id(request)  # enforce auth — burns API credits
         body = await request.json()
         from app.services.anthropic_client import polish_text as do_polish
 

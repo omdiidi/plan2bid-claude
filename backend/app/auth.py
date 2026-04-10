@@ -27,6 +27,12 @@ def get_user_id(request: Request) -> str:
 
 
 def get_optional_user_id(request: Request) -> str | None:
+    """Returns user_id if valid token present, DEV_UUID in dev mode, or None.
+    In production (DEV_MODE off), missing/expired tokens return None.
+    Routes using `or DEV_UUID` will then get DEV_UUID, but permission checks
+    will reject it because the OWNER bypass is also gated on DEV_MODE.
+    For routes that MUST have a real user, use get_required_user_id instead.
+    """
     auth_header = request.headers.get("authorization", "")
     if not auth_header.startswith("Bearer "):
         return DEV_UUID if _DEV_MODE else None
@@ -35,6 +41,16 @@ def get_optional_user_id(request: Request) -> str | None:
     if uid:
         return uid
     return DEV_UUID if _DEV_MODE else None
+
+
+def get_required_user_id(request: Request) -> str:
+    """Like get_optional_user_id but raises 401 if no valid user.
+    In dev mode, falls back to DEV_UUID. In production, requires real auth.
+    """
+    uid = get_optional_user_id(request)
+    if uid:
+        return uid
+    raise HTTPException(401, "Authentication required")
 
 
 def get_project_permission(project: dict, user_id: str | None) -> ProjectPermission | None:
