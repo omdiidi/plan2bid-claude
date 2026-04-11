@@ -96,7 +96,7 @@ async def create_scenario(job_id: str, body: CreateScenarioBody, request: Reques
             if not parent or parent.get("project_id") != job_id:
                 raise HTTPException(400, "Parent scenario does not belong to this project")
 
-        scenario_id = f"scn_{uuid.uuid4().hex[:12]}"
+        scenario_id = str(uuid.uuid4())  # DB column is UUID, not TEXT
         name = body.name or f"Scenario {datetime.now(timezone.utc).strftime('%b %d %H:%M')}"
 
         queries.insert_scenario(scenario_id, job_id, user_id, name, body.context)

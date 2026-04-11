@@ -122,7 +122,7 @@ async def admin_create_token(body: CreateTokenBody, request: Request):
 
 
 @router.delete("/api/admin/tokens/{token_id}")
-async def admin_revoke_token(token_id: int, request: Request):
+async def admin_revoke_token(token_id: str, request: Request):  # UUID in DB, not int
     try:
         user_id = get_optional_user_id(request) or DEV_UUID
         await require_admin(user_id)
