@@ -62,33 +62,31 @@ const STAGE_DISPLAY: Record<string, { name: string; subtitle: string }> = {
   pricing_labor: { name: "Pricing & Labor Estimation",   subtitle: "Material pricing and labor costs (parallel)" },
 };
 
-const STAGE_ORDER = [
-  "ingestion",
-  "parsing",
-  "classification",
-  "brief",
-  "extraction",
-  "context",
-  "pricing_labor",
-];
-
 type StageUIStatus = "pending" | "running" | "completed" | "failed";
 
-function getStageStatus(stageKey: string, currentStage: string, pipelineStatus: string): StageUIStatus {
-  const currentIdx = STAGE_ORDER.indexOf(currentStage);
-  const stageIdx = STAGE_ORDER.indexOf(stageKey);
+// ─── Time-based interpolation stages ────────────────────────────────────────
+// These match Claude's actual estimation workflow. Progress and labels are
+// derived from elapsed time since the job was queued. Survives page refresh
+// because elapsed is computed from the server's queued_at timestamp.
+const INTERPOLATED_STAGES = [
+  { minSec: 0,    maxSec: 15,   label: "Downloading documents...",        startPct: 0,  endPct: 10  },
+  { minSec: 15,   maxSec: 120,  label: "Reading & analyzing plans...",    startPct: 10, endPct: 25  },
+  { minSec: 120,  maxSec: 300,  label: "Extracting line items...",        startPct: 25, endPct: 45  },
+  { minSec: 300,  maxSec: 720,  label: "Researching material pricing...", startPct: 45, endPct: 65  },
+  { minSec: 720,  maxSec: 1200, label: "Estimating labor costs...",       startPct: 65, endPct: 82  },
+  { minSec: 1200, maxSec: 7200, label: "Finalizing estimate...",          startPct: 82, endPct: 90  },
+];
 
-  if (pipelineStatus === "completed") return "completed";
-  if (pipelineStatus === "failed" || pipelineStatus === "error") {
-    if (stageIdx < currentIdx) return "completed";
-    if (stageIdx === currentIdx) return "failed";
-    return "pending";
+function getInterpolatedState(elapsedSec: number): { label: string; progress: number } {
+  for (const stage of INTERPOLATED_STAGES) {
+    if (elapsedSec < stage.maxSec) {
+      const t = (elapsedSec - stage.minSec) / (stage.maxSec - stage.minSec);
+      // Ease-out curve: fast start, slow finish within each stage
+      const eased = 1 - Math.pow(1 - t, 2);
+      return { label: stage.label, progress: stage.startPct + eased * (stage.endPct - stage.startPct) };
+    }
   }
-  // currentStage not in our list — mark everything pending
-  if (currentIdx === -1) return "pending";
-  if (stageIdx < currentIdx) return "completed";
-  if (stageIdx === currentIdx) return "running";
-  return "pending";
+  return { label: "Finalizing estimate...", progress: 90 };
 }
 
 // ─── Design canvas constants (desktop reference size) ────────────────────────
@@ -177,48 +175,6 @@ const CATEGORY_CARDS = [
     ),
   },
 ];
-
-// ─── Trade progress parsing ──────────────────────────────────────────────────
-interface TradeProgress {
-  name: string;
-  done: boolean;
-}
-
-function parseTradeProgress(message: string, logs: EstimateStatus["logs"]): TradeProgress[] {
-  // Try to parse "Extracted 2/5 trades — Electrical: 42 items" or "Priced & estimated 3/5 trades — Plumbing done"
-  const trades: TradeProgress[] = [];
-
-  // Gather completed trades from logs
-  const doneSet = new Set<string>();
-  if (logs) {
-    for (const log of logs) {
-      // "Extracted electrical: 42 items (30 material, 12 labor)"
-      const extMatch = log.message.match(/^Extracted (\w+):/i);
-      if (extMatch) doneSet.add(extMatch[1].toLowerCase());
-      // "Priced & estimated 2/3 trades — Electrical done"
-      const pricedMatch = log.message.match(/trades? — (.+?) done$/i);
-      if (pricedMatch) doneSet.add(pricedMatch[1].toLowerCase().replace(/\s+/g, "_"));
-    }
-  }
-
-  // Extract current trade from message
-  const msgTradeMatch = message.match(/— (.+?)(?:: \d| done)/i);
-  const currentTrade = msgTradeMatch ? msgTradeMatch[1].toLowerCase().replace(/\s+/g, "_") : null;
-
-  // Build list from done trades + current
-  for (const t of doneSet) {
-    trades.push({ name: t, done: true });
-  }
-  if (currentTrade && !doneSet.has(currentTrade)) {
-    trades.push({ name: currentTrade, done: false });
-  }
-
-  return trades;
-}
-
-function formatTradeName(name: string): string {
-  return name.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
-}
 
 // ─── Sparkle SVG ─────────────────────────────────────────────────────────────
 function Sparkle({ className, style }: { className?: string; style?: React.CSSProperties }) {
@@ -367,45 +323,76 @@ export default function Progress() {
   const currentStage = activeStatus?.stage ?? "";
   const logs = activeStatus?.logs ?? [];
 
-  // Smooth progress interpolation — worker only reports 5% and 10%, then jumps to completed.
-  // We interpolate the displayed progress to avoid a jarring 10% → 100% jump.
+  // ── Time-based progress interpolation ──
+  // Worker only reports 5% and 10%, then nothing until "completed".
+  // We derive progress and stage labels from elapsed time since queued_at.
+  // This survives page refreshes because elapsed is computed from the server timestamp.
   const [displayProgress, setDisplayProgress] = useState(0);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
+  // Tick elapsed seconds — initialized from queued_at so page refresh restores position
   useEffect(() => {
+    if (isPreview) return; // preview handles its own progression
     const isRunning = activeStatus?.status === "running" || activeStatus?.status === "queued";
+    if (!isRunning) return;
 
+    const queuedAt = activeStatus?.queued_at;
+    const baseElapsed = queuedAt ? (Date.now() - new Date(queuedAt).getTime()) / 1000 : 0;
+    setElapsedSeconds(Math.max(0, baseElapsed));
+
+    const interval = setInterval(() => {
+      setElapsedSeconds(prev => prev + 2);
+    }, 2000);
+    return () => clearInterval(interval);
+  }, [activeStatus?.status, activeStatus?.queued_at, isPreview]);
+
+  // Derive interpolated state from elapsed seconds
+  const interpolated = useMemo(() => getInterpolatedState(elapsedSeconds), [elapsedSeconds]);
+
+  // Update display progress — never regresses, snaps to 100 on completed
+  useEffect(() => {
+    if (isPreview) {
+      setDisplayProgress(serverProgress);
+      return;
+    }
+    const isRunning = activeStatus?.status === "running" || activeStatus?.status === "queued";
     if (!isRunning) {
       setDisplayProgress(activeStatus?.status === "completed" ? 100 : serverProgress);
       return;
     }
+    setDisplayProgress(prev => Math.max(serverProgress, interpolated.progress, prev));
+  }, [activeStatus?.status, serverProgress, interpolated.progress, isPreview]);
 
-    // Jump to at least server progress
-    setDisplayProgress(prev => Math.max(serverProgress, prev));
-
-    const interval = setInterval(() => {
-      setDisplayProgress(prev => {
-        if (prev >= 90) return 90; // Cap at 90% while running
-        const remaining = 90 - prev;
-        const increment = Math.max(0.3, remaining * 0.02);
-        return Math.min(90, prev + increment);
-      });
-    }, 3000);
-
-    return () => clearInterval(interval);
-  }, [activeStatus?.status, serverProgress]);
+  // Stage label — time-based when running, fallback for other states
+  const stageDisplay = useMemo(() => {
+    if (isPreview) return STAGE_DISPLAY[currentStage] ?? { name: currentStage, subtitle: "" };
+    const isRunning = activeStatus?.status === "running" || activeStatus?.status === "queued";
+    if (!isRunning) {
+      if (activeStatus?.status === "completed") return { name: "Estimate Complete", subtitle: "Your estimate is ready" };
+      return STAGE_DISPLAY[currentStage] ?? { name: currentStage || "Starting...", subtitle: "Preparing your estimate..." };
+    }
+    return { name: interpolated.label, subtitle: interpolated.label };
+  }, [activeStatus?.status, currentStage, interpolated.label, isPreview]);
 
   const progress = displayProgress;
-  const stageDisplay = STAGE_DISPLAY[currentStage] ?? { name: currentStage, subtitle: "" };
 
   // Progress ring dasharray
   const ringDash = (progress / 100) * RING_C;
 
-  // Trade progress for extraction / pricing_labor stages
-  const tradeProgress = useMemo(() => {
-    if (!activeStatus) return [];
-    if (currentStage !== "extraction" && currentStage !== "pricing_labor") return [];
-    return parseTradeProgress(activeStatus.message, activeStatus.logs);
-  }, [activeStatus, currentStage]);
+  // Stage list items derived from elapsed time
+  const stageListItems = useMemo(() => {
+    if (isPreview) return null; // preview uses old STAGE_DISPLAY rendering
+    const isRunning = activeStatus?.status === "running" || activeStatus?.status === "queued";
+    if (activeStatus?.status === "completed") {
+      return INTERPOLATED_STAGES.map(s => ({ name: s.label, status: "completed" as StageUIStatus }));
+    }
+    if (!isRunning) return null;
+    return INTERPOLATED_STAGES.map(s => {
+      if (elapsedSeconds >= s.maxSec) return { name: s.label, status: "completed" as StageUIStatus };
+      if (elapsedSeconds >= s.minSec) return { name: s.label, status: "running" as StageUIStatus };
+      return { name: s.label, status: "pending" as StageUIStatus };
+    });
+  }, [activeStatus?.status, elapsedSeconds, isPreview]);
 
   return (
     <div className="animate-fade-in">
@@ -643,57 +630,16 @@ export default function Progress() {
         <Card className="p-5 shadow-card">
           <h2 className="text-sm font-semibold text-foreground mb-3">Pipeline Stages</h2>
           <div className="space-y-0.5">
-            {STAGE_ORDER.map((key) => {
-              const stageInfo = STAGE_DISPLAY[key] ?? { name: key, subtitle: "" };
-              const uiStatus = activeStatus ? getStageStatus(key, currentStage, activeStatus.status) : "pending";
-              const isParallel = key === "pricing_labor";
-              const isTradeStage = key === "extraction" || key === "pricing_labor";
-              const showTrades = isTradeStage && uiStatus === "running" && tradeProgress.length > 0;
-
-              return (
-                <div key={key}>
-                  <div className={`flex items-start gap-3 px-3 py-2 rounded-lg transition-colors ${uiStatus === "running" ? "bg-accent/5" : ""}`}>
-                    <div className="mt-0.5"><StageIcon status={uiStatus} /></div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className={`text-sm font-medium ${uiStatus === "pending" ? "text-muted-foreground/50" : "text-foreground"}`}>
-                          {stageInfo.name}
-                        </span>
-                        {isParallel && (
-                          <span className="text-[10px] px-1.5 py-0 rounded bg-secondary text-secondary-foreground">parallel</span>
-                        )}
-                      </div>
-                      {uiStatus !== "pending" && (
-                        <p className="text-xs text-muted-foreground mt-0.5">{stageInfo.subtitle}</p>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Trade chips for extraction / pricing_labor */}
-                  {showTrades && (
-                    <div className="flex flex-wrap gap-1.5 ml-11 mb-1.5">
-                      {tradeProgress.map((t) => (
-                        <span
-                          key={t.name}
-                          className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full ${
-                            t.done
-                              ? "bg-success/10 text-success"
-                              : "bg-accent/10 text-accent"
-                          }`}
-                        >
-                          {t.done ? (
-                            <CheckCircle2 className="w-3 h-3" />
-                          ) : (
-                            <Loader2 className="w-3 h-3 animate-spin" />
-                          )}
-                          {formatTradeName(t.name)}
-                        </span>
-                      ))}
-                    </div>
-                  )}
+            {(stageListItems ?? []).map((item, i) => (
+              <div key={i} className={`flex items-start gap-3 px-3 py-2 rounded-lg transition-colors ${item.status === "running" ? "bg-accent/5" : ""}`}>
+                <div className="mt-0.5"><StageIcon status={item.status} /></div>
+                <div className="flex-1 min-w-0">
+                  <span className={`text-sm font-medium ${item.status === "pending" ? "text-muted-foreground/50" : "text-foreground"}`}>
+                    {item.name}
+                  </span>
                 </div>
-              );
-            })}
+              </div>
+            ))}
           </div>
         </Card>
 
