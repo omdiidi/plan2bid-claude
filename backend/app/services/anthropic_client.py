@@ -11,9 +11,7 @@ logger = logging.getLogger(__name__)
 OPENROUTER_BASE_URL = "https://openrouter.ai/api"
 
 # Model aliases — all routed through OpenRouter
-HAIKU = "google/gemma-4-31b-it"
-SONNET = "anthropic/claude-sonnet-4-5-20250514"
-OPUS = "anthropic/claude-opus-4-6"
+GEMMA4 = "google/gemma-4-31b-it"
 
 _client = None
 
@@ -68,7 +66,7 @@ async def generate_trade_summary(job_id: str) -> dict:
 
     client = _get_client()
     response = await client.messages.create(
-        model=HAIKU,
+        model=GEMMA4,
         max_tokens=4096,
         system=TRADE_SUMMARY_SYSTEM,
         messages=[{
@@ -104,7 +102,7 @@ async def generate_overall_summary(job_id: str) -> dict:
 
     client = _get_client()
     response = await client.messages.create(
-        model=HAIKU,
+        model=GEMMA4,
         max_tokens=4096,
         system=OVERALL_SUMMARY_SYSTEM,
         messages=[{
@@ -144,7 +142,7 @@ Only include matches where confidence is medium or high. Omit items with no good
 
     client = _get_client()
     response = await client.messages.create(
-        model=HAIKU,
+        model=GEMMA4,
         max_tokens=4096,
         messages=[{"role": "user", "content": prompt}],
     )
@@ -205,7 +203,7 @@ Include up to 5 questions for missing details. Fewer if the description is thoro
 
     client = _get_client()
     response = await client.messages.create(
-        model=HAIKU,
+        model=GEMMA4,
         max_tokens=2048,
         messages=[{"role": "user", "content": prompt}],
     )
@@ -218,7 +216,7 @@ Include up to 5 questions for missing details. Fewer if the description is thoro
 async def polish_text(text: str) -> str:
     client = _get_client()
     response = await client.messages.create(
-        model=HAIKU,
+        model=GEMMA4,
         max_tokens=2048,
         system=(
             "You polish construction project descriptions. "
