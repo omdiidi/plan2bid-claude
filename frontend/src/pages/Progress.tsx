@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { getEstimateStatus, type EstimateStatus } from "@/lib/api";
-import { CheckCircle2, Circle, Clock, Loader2, XCircle, AlertTriangle, ChevronDown, ChevronUp, ArrowRight } from "lucide-react";
+import { CheckCircle2, Circle, Loader2, XCircle, AlertTriangle, ChevronDown, ChevronUp, ArrowRight } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -52,6 +52,7 @@ const THEME = {
 
 // ─── Stage mapping (visual stages — worker reports ingestion + extraction, rest are interpolated) ─
 const STAGE_DISPLAY: Record<string, { name: string; subtitle: string }> = {
+  queued:        { name: "Starting Estimation",          subtitle: "Preparing your estimate..." },
   ingestion:     { name: "File Upload & Extraction",     subtitle: "Extracting and validating documents from ZIP" },
   parsing:       { name: "Document Parsing",             subtitle: "Parsing pages" },
   classification:{ name: "Document Classification",      subtitle: "Classifying documents by type and relevance" },
@@ -361,8 +362,7 @@ export default function Progress() {
 
   const isComplete = activeStatus?.status === "completed";
   const isFailed = activeStatus?.status === "error";
-  const isQueued = activeStatus?.status === "queued";
-  const queuePosition = activeStatus?.queue_position;
+  // Queue state handled inline — no separate banner, progress starts immediately
   const serverProgress = activeStatus?.progress ?? 0;
   const currentStage = activeStatus?.stage ?? "";
   const logs = activeStatus?.logs ?? [];
@@ -372,7 +372,7 @@ export default function Progress() {
   const [displayProgress, setDisplayProgress] = useState(0);
 
   useEffect(() => {
-    const isRunning = activeStatus?.status === "running";
+    const isRunning = activeStatus?.status === "running" || activeStatus?.status === "queued";
 
     if (!isRunning) {
       setDisplayProgress(activeStatus?.status === "completed" ? 100 : serverProgress);
@@ -409,28 +409,8 @@ export default function Progress() {
 
   return (
     <div className="animate-fade-in">
-      {/* ── Queue Waiting Banner ── */}
-      {isQueued && (
-        <Card className="p-6 shadow-card border-amber-500/30 bg-amber-500/5 mb-6 animate-slide-up">
-          <div className="flex items-center gap-3">
-            <Clock className="w-6 h-6 text-amber-500 shrink-0" />
-            <div>
-              <p className="font-semibold text-foreground">In Queue</p>
-              <p className="text-sm text-muted-foreground">
-                {queuePosition === 1
-                  ? "Your estimate is next — it will start when the current pipeline finishes."
-                  : `Position ${queuePosition ?? "..."} in queue. Another pipeline is currently running.`}
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                You can close this page — your estimate will process automatically.
-              </p>
-            </div>
-          </div>
-        </Card>
-      )}
-
       {/* ── Animated Loading Visualization ── */}
-      {!isComplete && !isFailed && !isQueued && (
+      {!isComplete && !isFailed && (
         <div ref={vizRef} className="relative w-full overflow-hidden rounded-2xl mb-6" style={{ background: THEME.bgGradient, aspectRatio: "16/9", maxHeight: "600px" }}>
           {/* Background blurs — outside canvas, fill outer container */}
           <div className="absolute -top-[120px] -left-[120px] w-[52%] h-[80%]" style={{ background: THEME.bgWhiteBlur }} />
