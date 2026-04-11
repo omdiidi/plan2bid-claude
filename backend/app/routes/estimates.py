@@ -1,5 +1,6 @@
 import json
 import logging
+import os
 import uuid
 from datetime import datetime, timezone
 
@@ -169,12 +170,15 @@ async def start_estimate(
             trades_list = [trade]
 
         MAX_UPLOAD_SIZE = 500 * 1024 * 1024
+        ALLOWED_EXTENSIONS = {'.zip', '.pdf', '.png', '.jpg', '.jpeg', '.tif', '.tiff', '.dwg', '.dxf', '.xlsx', '.xls', '.docx', '.doc'}
         content = await zip_file.read()
         if len(content) > MAX_UPLOAD_SIZE:
             raise HTTPException(413, "File too large. Maximum size is 500 MB.")
-        if not zip_file.filename or not zip_file.filename.lower().endswith('.zip'):
-            raise HTTPException(400, "Only .zip files are accepted.")
-        zip_storage_path = f"{job_id}/documents.zip"
+        filename = (zip_file.filename or "").lower()
+        ext = os.path.splitext(filename)[1] if filename else ""
+        if ext and ext not in ALLOWED_EXTENSIONS:
+            raise HTTPException(400, f"File type '{ext}' not accepted. Allowed: {', '.join(sorted(ALLOWED_EXTENSIONS))}")
+        zip_storage_path = f"{job_id}/documents{ext or '.bin'}"
         _db().storage.from_("project-files").upload(zip_storage_path, content)
 
         queries.create_project({

@@ -217,7 +217,7 @@ Include up to 5 questions for missing details. Fewer if the description is thoro
 async def polish_text(text: str) -> str:
     client = _get_client()
     response = await client.messages.create(
-        model=GEMMA4,
+        model=MERCURY2,
         max_tokens=2048,
         system=(
             "You polish construction project descriptions. "
