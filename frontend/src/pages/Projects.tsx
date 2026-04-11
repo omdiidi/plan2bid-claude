@@ -167,7 +167,7 @@ export default function Projects() {
                     if (isOwner) toggleSelect(project.id);
                     return;
                   }
-                  navigate(project.status === "running" || project.status === "queued" ? `/progress/${project.id}` : `/results/${project.id}`);
+                  navigate(project.status === "running" || project.status === "queued" || project.status === "error" ? `/progress/${project.id}` : `/results/${project.id}`);
                 }}
               >
                 {/* Select checkbox */}

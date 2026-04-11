@@ -35,6 +35,10 @@ def validate_settings(s: _Settings) -> list[str]:
         warnings.append("SUPABASE_SERVICE_ROLE_KEY is not set")
     if not s.SUPABASE_JWT_SECRET or s.SUPABASE_JWT_SECRET.startswith("YOUR_"):
         warnings.append("SUPABASE_JWT_SECRET is not set or is a placeholder")
+    if not s.OPENROUTER_API_KEY:
+        warnings.append("OPENROUTER_API_KEY is not set — AI endpoints will fail")
+    if not s.OPENAI_API_KEY:
+        warnings.append("OPENAI_API_KEY is not set — transcription will fail")
     return warnings
 
 

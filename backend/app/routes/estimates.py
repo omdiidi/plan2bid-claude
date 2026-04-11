@@ -167,7 +167,12 @@ async def start_estimate(
         except (json.JSONDecodeError, TypeError):
             trades_list = [trade]
 
+        MAX_UPLOAD_SIZE = 500 * 1024 * 1024
         content = await zip_file.read()
+        if len(content) > MAX_UPLOAD_SIZE:
+            raise HTTPException(413, "File too large. Maximum size is 500 MB.")
+        if not zip_file.filename or not zip_file.filename.lower().endswith('.zip'):
+            raise HTTPException(400, "Only .zip files are accepted.")
         zip_storage_path = f"{job_id}/documents.zip"
         _db().storage.from_("project-files").upload(zip_storage_path, content)
 
@@ -330,8 +335,8 @@ async def get_estimate(job_id: str, request: Request):
         confidence_dist = _compute_confidence_distribution(line_items)
         anomaly_report = _build_anomaly_report(anomalies)
 
-        total_docs = sum(int(e.get("total_documents", 0) or 0) for e in ext_meta)
-        total_pages = sum(int(e.get("total_pages", 0) or 0) for e in ext_meta)
+        total_docs = sum(int(e.get("documents_searched", 0) or 0) for e in ext_meta)
+        total_pages = sum(int(e.get("pages_searched", 0) or 0) for e in ext_meta)
 
         bls_area = ""
         bls_wages: dict = {}
@@ -343,7 +348,7 @@ async def get_estimate(job_id: str, request: Request):
 
         parsing_warnings: list[dict] = []
         for em in ext_meta:
-            warn_list = em.get("parsing_warnings")
+            warn_list = em.get("warnings")
             if isinstance(warn_list, list):
                 parsing_warnings.extend(warn_list)
 
@@ -408,9 +413,10 @@ async def add_material_item(job_id: str, request: Request):
         require_permission(project, user_id, ProjectPermission.EDITOR)
 
         body = await request.json()
+        safe_body = {k: v for k, v in body.items() if k in MATERIAL_UPDATABLE or k == "item_id"}
         item_id = f"CUSTOM-MAT-{uuid.uuid4().hex[:8]}"
-        body["item_id"] = item_id
-        result = queries.add_material_item(job_id, body)
+        safe_body["item_id"] = item_id
+        result = queries.add_material_item(job_id, safe_body)
         queries.recalculate_material_metadata(job_id)
         return result
     except HTTPException:
@@ -449,9 +455,10 @@ async def add_labor_item(job_id: str, request: Request):
         require_permission(project, user_id, ProjectPermission.EDITOR)
 
         body = await request.json()
+        safe_body = {k: v for k, v in body.items() if k in LABOR_UPDATABLE or k == "item_id"}
         item_id = f"CUSTOM-LAB-{uuid.uuid4().hex[:8]}"
-        body["item_id"] = item_id
-        result = queries.add_labor_item(job_id, body)
+        safe_body["item_id"] = item_id
+        result = queries.add_labor_item(job_id, safe_body)
         queries.recalculate_labor_metadata(job_id)
         return result
     except HTTPException:

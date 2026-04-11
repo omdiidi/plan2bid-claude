@@ -237,6 +237,9 @@ def recalculate_material_metadata(job_id: str):
             "total_cost_expected": total,
             "total_cost_low": sum(float(it.get("extended_cost_low", 0) or 0) for it in trade_items),
             "total_cost_high": sum(float(it.get("extended_cost_high", 0) or 0) for it in trade_items),
+            "items_high_confidence": sum(1 for i in trade_items if (i.get("confidence") or "").lower() == "high"),
+            "items_medium_confidence": sum(1 for i in trade_items if (i.get("confidence") or "").lower() == "medium"),
+            "items_low_confidence": sum(1 for i in trade_items if (i.get("confidence") or "").lower() == "low"),
         })
 
 
@@ -256,6 +259,12 @@ def recalculate_labor_metadata(job_id: str):
             "total_labor_hours": hours,
             "total_cost_low": sum(float(it.get("cost_low", 0) or 0) for it in trade_items),
             "total_cost_high": sum(float(it.get("cost_high", 0) or 0) for it in trade_items),
+            "items_high_confidence": sum(1 for i in trade_items if (i.get("confidence") or "").lower() == "high"),
+            "items_medium_confidence": sum(1 for i in trade_items if (i.get("confidence") or "").lower() == "medium"),
+            "items_low_confidence": sum(1 for i in trade_items if (i.get("confidence") or "").lower() == "low"),
+            "total_hours_low": sum(float(i.get("hours_low", 0) or 0) for i in trade_items),
+            "total_hours_expected": sum(float(i.get("hours_expected", 0) or 0) for i in trade_items),
+            "total_hours_high": sum(float(i.get("hours_high", 0) or 0) for i in trade_items),
         })
 
 
@@ -351,7 +360,7 @@ def insert_scenario(scenario_id: str, job_id: str, user_id: str, name: str, cont
     _db().table("scenarios").insert({
         "id": scenario_id,
         "project_id": job_id,
-        "user_id": user_id,
+        "created_by": user_id,
         "name": name,
         "context": context,
     }).execute()

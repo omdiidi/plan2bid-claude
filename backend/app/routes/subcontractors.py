@@ -132,15 +132,16 @@ async def create_sub_invite(job_id: str, body: CreateInviteBody, request: Reques
         token = str(uuid.uuid4())
         invite_data = {
             "project_id": job_id,
-            "shared_by_user_id": user_id,
-            "token": token,
-            "email": body.email,
+            "invited_by": user_id,
+            "share_token": token,
+            "shared_with_email": body.email if hasattr(body, 'email') and body.email else None,
             "permission": "viewer",
             "share_type": "link",
             "trades_scope": json.dumps(body.trades_scope),
             "allow_competitive_view": body.allow_competitive_view,
         }
         row = queries.create_sub_invite(invite_data)
+        row["token"] = row.get("share_token") or token
         return row
     except HTTPException:
         raise
