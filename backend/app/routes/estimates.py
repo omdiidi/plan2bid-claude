@@ -170,14 +170,14 @@ async def start_estimate(
             trades_list = [trade]
 
         MAX_UPLOAD_SIZE = 500 * 1024 * 1024
-        ALLOWED_EXTENSIONS = {'.zip', '.pdf', '.png', '.jpg', '.jpeg', '.tif', '.tiff', '.dwg', '.dxf', '.xlsx', '.xls', '.docx', '.doc'}
+        ALLOWED_EXTENSIONS = {'.zip', '.pdf', '.png', '.jpg', '.jpeg', '.tif', '.tiff', '.heic'}
         content = await zip_file.read()
         if len(content) > MAX_UPLOAD_SIZE:
             raise HTTPException(413, "File too large. Maximum size is 500 MB.")
         filename = (zip_file.filename or "").lower()
         ext = os.path.splitext(filename)[1] if filename else ""
-        if ext and ext not in ALLOWED_EXTENSIONS:
-            raise HTTPException(400, f"File type '{ext}' not accepted. Allowed: {', '.join(sorted(ALLOWED_EXTENSIONS))}")
+        if not ext or ext not in ALLOWED_EXTENSIONS:
+            raise HTTPException(400, f"File type not accepted. Allowed: {', '.join(sorted(ALLOWED_EXTENSIONS))}")
         zip_storage_path = f"{job_id}/documents{ext or '.bin'}"
         _db().storage.from_("project-files").upload(zip_storage_path, content)
 
