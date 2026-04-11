@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 OPENROUTER_BASE_URL = "https://openrouter.ai/api"
 
 # Model aliases — all routed through OpenRouter
-HAIKU = "anthropic/claude-haiku-4-5-20251001"
+HAIKU = "google/gemma-4-31b-it"
 SONNET = "anthropic/claude-sonnet-4-5-20250514"
 OPUS = "anthropic/claude-opus-4-6"
 
