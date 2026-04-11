@@ -9,6 +9,7 @@ from app.auth import (
     DEV_UUID,
     ProjectPermission,
     get_optional_user_id,
+    get_required_user_id,
     get_user_id,
     require_permission,
 )
@@ -157,7 +158,7 @@ async def start_estimate(
     selected_trades: str = Form("[]"),
 ):
     try:
-        user_id = get_optional_user_id(request) or DEV_UUID
+        user_id = get_required_user_id(request)
 
         job_id = f"est_{uuid.uuid4().hex[:12]}"
         project_address = ", ".join(p for p in [street_address, city, state, zip_code] if p)

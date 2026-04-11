@@ -273,15 +273,15 @@ def recalculate_labor_metadata(job_id: str):
 # ---------------------------------------------------------------------------
 
 def get_user_settings(user_id: str) -> dict | None:
-    rows = _db().table("user_settings").select("*").eq("user_id", user_id).execute()
+    rows = _db().table("user_preferences").select("*").eq("user_id", user_id).execute()
     return _first_or_none(rows)
 
 
 def save_user_settings(user_id: str, settings_data: dict, onboarding_complete: bool | None = None):
-    payload = {**settings_data, "user_id": user_id}
+    payload: dict = {"user_id": user_id, "settings": settings_data}
     if onboarding_complete is not None:
         payload["onboarding_complete"] = onboarding_complete
-    _db().table("user_settings").upsert(payload, on_conflict="user_id").execute()
+    _db().table("user_preferences").upsert(payload, on_conflict="user_id").execute()
 
 
 def get_project_overrides(job_id: str, user_id: str) -> dict | None:
