@@ -413,9 +413,14 @@ async def add_material_item(job_id: str, request: Request):
         require_permission(project, user_id, ProjectPermission.EDITOR)
 
         body = await request.json()
+        # Map frontend field names to DB column names
+        if "unit_cost" in body and "unit_cost_expected" not in body:
+            body["unit_cost_expected"] = body.pop("unit_cost")
+            body["extended_cost_expected"] = body.get("unit_cost_expected", 0) * body.get("quantity", 0)
         safe_body = {k: v for k, v in body.items() if k in MATERIAL_UPDATABLE or k == "item_id"}
         item_id = f"CUSTOM-MAT-{uuid.uuid4().hex[:8]}"
         safe_body["item_id"] = item_id
+        safe_body.setdefault("confidence", "medium")
         result = queries.add_material_item(job_id, safe_body)
         queries.recalculate_material_metadata(job_id)
         return result
@@ -455,9 +460,18 @@ async def add_labor_item(job_id: str, request: Request):
         require_permission(project, user_id, ProjectPermission.EDITOR)
 
         body = await request.json()
+        # Map frontend field names to DB column names
+        if "hours" in body and "total_labor_hours" not in body:
+            body["total_labor_hours"] = body.pop("hours")
+        if "hourly_rate" in body and "blended_hourly_rate" not in body:
+            body["blended_hourly_rate"] = body.pop("hourly_rate")
+        if "total_labor_hours" in body and "blended_hourly_rate" in body:
+            body.setdefault("cost_expected", body["total_labor_hours"] * body["blended_hourly_rate"])
+            body.setdefault("labor_cost", body["cost_expected"])
         safe_body = {k: v for k, v in body.items() if k in LABOR_UPDATABLE or k == "item_id"}
         item_id = f"CUSTOM-LAB-{uuid.uuid4().hex[:8]}"
         safe_body["item_id"] = item_id
+        safe_body.setdefault("confidence", "medium")
         result = queries.add_labor_item(job_id, safe_body)
         queries.recalculate_labor_metadata(job_id)
         return result
