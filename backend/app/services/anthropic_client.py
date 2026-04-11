@@ -205,7 +205,7 @@ Include up to 5 questions for missing details. Fewer if the description is thoro
 
     client = _get_client()
     response = await client.messages.create(
-        model=SONNET,
+        model=HAIKU,
         max_tokens=2048,
         messages=[{"role": "user", "content": prompt}],
     )
