@@ -11,7 +11,8 @@ logger = logging.getLogger(__name__)
 OPENROUTER_BASE_URL = "https://openrouter.ai/api"
 
 # Model aliases — all routed through OpenRouter
-GEMMA4 = "google/gemma-4-31b-it"
+GEMMA4 = "google/gemma-4-31b-it"          # summaries, presets, polish
+MERCURY2 = "inception/mercury-2"           # description validation (reasoning)
 
 _client = None
 
@@ -203,7 +204,7 @@ Include up to 5 questions for missing details. Fewer if the description is thoro
 
     client = _get_client()
     response = await client.messages.create(
-        model=GEMMA4,
+        model=MERCURY2,
         max_tokens=2048,
         messages=[{"role": "user", "content": prompt}],
     )
