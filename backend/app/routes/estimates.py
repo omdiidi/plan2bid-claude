@@ -416,7 +416,10 @@ async def add_material_item(job_id: str, request: Request):
         # Map frontend field names to DB column names
         if "unit_cost" in body and "unit_cost_expected" not in body:
             body["unit_cost_expected"] = body.pop("unit_cost")
-            body["extended_cost_expected"] = body.get("unit_cost_expected", 0) * body.get("quantity", 0)
+        # Compute extended cost if not provided
+        uc = float(body.get("unit_cost_expected", 0) or 0)
+        qty = float(body.get("quantity", 0) or 0)
+        body.setdefault("extended_cost_expected", uc * qty)
         safe_body = {k: v for k, v in body.items() if k in MATERIAL_UPDATABLE or k == "item_id"}
         item_id = f"CUSTOM-MAT-{uuid.uuid4().hex[:8]}"
         safe_body["item_id"] = item_id
@@ -466,7 +469,9 @@ async def add_labor_item(job_id: str, request: Request):
         if "hourly_rate" in body and "blended_hourly_rate" not in body:
             body["blended_hourly_rate"] = body.pop("hourly_rate")
         if "total_labor_hours" in body and "blended_hourly_rate" in body:
-            body.setdefault("cost_expected", body["total_labor_hours"] * body["blended_hourly_rate"])
+            hrs = float(body["total_labor_hours"] or 0)
+            rate = float(body["blended_hourly_rate"] or 0)
+            body.setdefault("cost_expected", hrs * rate)
             body.setdefault("labor_cost", body["cost_expected"])
         safe_body = {k: v for k, v in body.items() if k in LABOR_UPDATABLE or k == "item_id"}
         item_id = f"CUSTOM-LAB-{uuid.uuid4().hex[:8]}"
