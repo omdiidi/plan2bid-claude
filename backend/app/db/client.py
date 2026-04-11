@@ -185,13 +185,26 @@ def _db() -> _SupabaseDB:
 
 
 def verify_jwt(token: str) -> str | None:
+    """Verify a Supabase auth token and return the user ID.
+
+    Uses Supabase's /auth/v1/user endpoint for verification — this handles
+    both HS256 (legacy) and ES256 (current) tokens correctly, checks expiry,
+    and respects token revocation.
+    """
+    if not token or len(token) < 20:
+        return None
     try:
-        payload = jwt.decode(
-            token,
-            settings.SUPABASE_JWT_SECRET,
-            algorithms=["HS256"],
-            audience="authenticated",
+        resp = httpx.get(
+            f"{settings.SUPABASE_URL}/auth/v1/user",
+            headers={
+                "apikey": settings.SUPABASE_ANON_KEY,
+                "Authorization": f"Bearer {token}",
+            },
+            timeout=5,
         )
-        return payload.get("sub")
-    except (jwt.InvalidTokenError, jwt.ExpiredSignatureError, Exception):
+        if resp.status_code == 200:
+            user = resp.json()
+            return user.get("id")
+        return None
+    except Exception:
         return None
